@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Run Analysis{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder me-1"></i>{{ project.title }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('sample_detail', project_id=project.id, sample_id=sample.id) }}" class="text-primary"><i class="fas fa-vial me-1"></i>{{ sample.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-play-circle me-1"></i>Run Analysis</li>
+            </ol>
+        </nav>
+        <h1 class="display-5 fw-bold text-primary"><i class="fas fa-dna me-2"></i>Run eDNA Analysis</h1>
+        <p class="lead">Configure and run analysis for sample: <strong class="text-primary">{{ sample.name }}</strong></p>
+        <div class="ocean-divider mb-4"></div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card ocean-card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-cogs me-2"></i>Analysis Configuration</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('run_analysis', project_id=project.id, sample_id=sample.id) }}" id="analysisForm">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-4">
+                        <h5 class="text-primary"><i class="fas fa-sliders-h me-2"></i>Analysis Parameters</h5>
+                        <div class="ocean-divider-sm mb-3"></div>
+                        
+                        <div class="mb-3">
+                            <label for="analysis_name" class="form-label"><i class="fas fa-tag me-2 text-primary"></i>Analysis Name*</label>
+                            {{ form.analysis_name(class="form-control ocean-input", placeholder="Enter a descriptive name for this analysis run") }}
+                            {% if form.analysis_name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.analysis_name.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label"><i class="fas fa-align-left me-2 text-primary"></i>Analysis Description</label>
+                            {{ form.description(class="form-control ocean-input", rows=3, placeholder="Describe the purpose of this analysis") }}
+                            {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.description.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Pipeline Configuration</h5>
+                        <hr>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="analysis_type" class="form-label">Analysis Type*</label>
+                        {{ form.analysis_type(class="form-select") }}
+                        <div class="form-text">Select the type of analysis to perform on this sample</div>
+                        {% if form.analysis_type.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.analysis_type.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6>Preprocessing Options</h6>
+                        <div class="ps-3 border-start">
+                            <div class="form-check mb-2">
+                                {{ form.quality_filtering(class="form-check-input") }}
+                                <label class="form-check-label" for="quality_filtering">
+                                    Quality filtering
+                                </label>
+                                <div class="form-text">Filter out low-quality sequences</div>
+                            </div>
+                            
+                            <div id="qualityOptions" class="mb-3 ps-3" style="display: none;">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-auto">
+                                        <label for="min_quality" class="col-form-label">Minimum quality score:</label>
+                                    </div>
+                                    <div class="col-auto">
+                                        {{ form.min_quality(class="form-control", style="width: 80px;") }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-check mb-2">
+                                {{ form.adapter_trimming(class="form-check-input") }}
+                                <label class="form-check-label" for="adapter_trimming">
+                                    Adapter trimming
+                                </label>
+                                <div class="form-text">Remove adapter sequences</div>
+                            </div>
+                            
+                            <div id="adapterOptions" class="mb-3 ps-3" style="display: none;">
+                                <div class="mb-2">
+                                    <label for="adapter_sequence" class="form-label">Adapter sequence:</label>
+                                    {{ form.adapter_sequence(class="form-control") }}
+                                </div>
+                            </div>
+                            
+                            <div class="form-check mb-2">
+                                {{ form.length_filtering(class="form-check-input") }}
+                                <label class="form-check-label" for="length_filtering">
+                                    Length filtering
+                                </label>
+                                <div class="form-text">Filter sequences by length</div>
+                            </div>
+                            
+                            <div id="lengthOptions" class="mb-3 ps-3" style="display: none;">
+                                <div class="row g-2 align-items-center mb-2">
+                                    <div class="col-auto">
+                                        <label for="min_length" class="col-form-label">Minimum length (bp):</label>
+                                    </div>
+                                    <div class="col-auto">
+                                        {{ form.min_length(class="form-control", style="width: 100px;") }}
+                                    </div>
+                                </div>
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-auto">
+                                        <label for="max_length" class="col-form-label">Maximum length (bp):</label>
+                                    </div>
+                                    <div class="col-auto">
+                                        {{ form.max_length(class="form-control", style="width: 100px;") }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6>Classification Options</h6>
+                        <div class="ps-3 border-start">
+                            <div class="mb-3">
+                                <label for="classification_model" class="form-label">Classification Model*</label>
+                                {{ form.classification_model(class="form-select") }}
+                                <div class="form-text">Select the model for taxonomic classification</div>
+                                {% if form.classification_model.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.classification_model.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="confidence_threshold" class="form-label">Confidence Threshold</label>
+                                <div class="d-flex align-items-center">
+                                    <input type="range" class="form-range flex-grow-1 me-2" id="confidenceSlider" min="0" max="100" value="60">
+                                    {{ form.confidence_threshold(class="form-control", style="width: 80px;") }}
+                                    <span class="ms-1">%</span>
+                                </div>
+                                <div class="form-text">Minimum confidence score for taxonomic assignments</div>
+                                {% if form.confidence_threshold.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.confidence_threshold.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="reference_database" class="form-label">Reference Database*</label>
+                                {{ form.reference_database(class="form-select") }}
+                                <div class="form-text">Select the reference database for taxonomic classification</div>
+                                {% if form.reference_database.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.reference_database.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6>Visualization Options</h6>
+                        <div class="ps-3 border-start">
+                            <div class="form-check mb-2">
+                                {{ form.generate_taxonomy_chart(class="form-check-input") }}
+                                <label class="form-check-label" for="generate_taxonomy_chart">
+                                    Generate taxonomy chart
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-2">
+                                {{ form.generate_abundance_chart(class="form-check-input") }}
+                                <label class="form-check-label" for="generate_abundance_chart">
+                                    Generate abundance chart
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-2">
+                                {{ form.generate_depth_distribution(class="form-check-input") }}
+                                <label class="form-check-label" for="generate_depth_distribution">
+                                    Generate depth distribution
+                                </label>
+                            </div>
+                            
+                            <div class="form-check mb-2">
+                                {{ form.generate_interactive_report(class="form-check-input") }}
+                                <label class="form-check-label" for="generate_interactive_report">
+                                    Generate interactive report
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.notify_on_completion(class="form-check-input") }}
+                            <label class="form-check-label" for="notify_on_completion">
+                                Notify me when analysis is complete
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('sample_detail', project_id=project.id, sample_id=sample.id) }}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-play-circle me-1"></i>Run Analysis
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Sample Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Name:</dt>
+                    <dd class="col-sm-7">{{ sample.name }}</dd>
+                    
+                    <dt class="col-sm-5">Collection Date:</dt>
+                    <dd class="col-sm-7">{{ sample.collection_date|default('Not specified', true) }}</dd>
+                    
+                    <dt class="col-sm-5">Location:</dt>
+                    <dd class="col-sm-7">{{ sample.location|default('Not specified', true) }}</dd>
+                    
+                    <dt class="col-sm-5">Depth:</dt>
+                    <dd class="col-sm-7">{% if sample.depth %}{{ sample.depth }} m{% else %}Not specified{% endif %}</dd>
+                    
+                    <dt class="col-sm-5">Sample Type:</dt>
+                    <dd class="col-sm-7">{{ sample.sample_type }}</dd>
+                    
+                    <dt class="col-sm-5">File Size:</dt>
+                    <dd class="col-sm-7">{{ sample.file_size|filesizeformat }}</dd>
+                    
+                    <dt class="col-sm-5">Uploaded:</dt>
+                    <dd class="col-sm-7">{{ sample.created_at|timeago }}</dd>
+                </dl>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Analysis Tips</h5>
+            </div>
+            <div class="card-body">
+                <p>For optimal results with deep-sea eDNA samples:</p>
+                <ul class="mb-0">
+                    <li>Use quality filtering for raw sequencing data</li>
+                    <li>Set confidence threshold based on your research needs (60-80% recommended)</li>
+                    <li>The DeepSea model is optimized for marine environments</li>
+                    <li>Generate interactive reports for comprehensive visualization</li>
+                    <li>Analysis time depends on sample size and selected options</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Previous Analyses</h5>
+            </div>
+            <div class="card-body">
+                {% if previous_analyses %}
+                <div class="list-group list-group-flush">
+                    {% for analysis in previous_analyses %}
+                    <a href="{{ url_for('analysis_detail', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ analysis.name }}</h6>
+                            <small>{{ analysis.created_at|timeago }}</small>
+                        </div>
+                        <p class="mb-1 text-truncate">{{ analysis.description|default('No description', true) }}</p>
+                        <small class="text-muted">{{ analysis.status }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No previous analyses for this sample.</p>
+                {% endif %}
+                
+                {% if previous_analyses and previous_analyses|length > 3 %}
+                <div class="d-grid mt-3">
+                    <a href="{{ url_for('sample_analyses', project_id=project.id, sample_id=sample.id) }}" class="btn btn-sm btn-outline-primary">View All Analyses</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle preprocessing options
+        const qualityFilteringCheckbox = document.getElementById('quality_filtering');
+        const qualityOptions = document.getElementById('qualityOptions');
+        
+        const adapterTrimmingCheckbox = document.getElementById('adapter_trimming');
+        const adapterOptions = document.getElementById('adapterOptions');
+        
+        const lengthFilteringCheckbox = document.getElementById('length_filtering');
+        const lengthOptions = document.getElementById('lengthOptions');
+        
+        function toggleOptions() {
+            qualityOptions.style.display = qualityFilteringCheckbox.checked ? 'block' : 'none';
+            adapterOptions.style.display = adapterTrimmingCheckbox.checked ? 'block' : 'none';
+            lengthOptions.style.display = lengthFilteringCheckbox.checked ? 'block' : 'none';
+        }
+        
+        qualityFilteringCheckbox.addEventListener('change', toggleOptions);
+        adapterTrimmingCheckbox.addEventListener('change', toggleOptions);
+        lengthFilteringCheckbox.addEventListener('change', toggleOptions);
+        
+        toggleOptions(); // Initial state
+        
+        // Sync range slider with input field
+        const confidenceSlider = document.getElementById('confidenceSlider');
+        const confidenceInput = document.getElementById('confidence_threshold');
+        
+        confidenceSlider.addEventListener('input', function() {
+            confidenceInput.value = this.value;
+        });
+        
+        confidenceInput.addEventListener('input', function() {
+            confidenceSlider.value = this.value;
+        });
+        
+        // Set initial slider value from input
+        confidenceSlider.value = confidenceInput.value || 60;
+    });
+</script>
+{% endblock %}

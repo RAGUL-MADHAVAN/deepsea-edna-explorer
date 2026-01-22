@@ -1,0 +1,611 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Researcher Profile{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-user me-1"></i>Researcher Profile</li>
+                </ol>
+            </nav>
+            <h1 class="display-5 fw-bold text-primary"><i class="fas fa-user-circle me-2"></i>Researcher Profile</h1>
+            <p class="lead">Manage your research profile and credentials</p>
+            <div class="ocean-divider mb-4"></div>
+        </div>
+    </div>
+    <!-- Updated Profile Header with Modern Design -->
+    <!-- Profile Header with Updated Navigation -->
+    <div class="row">
+    <div class="col-lg-3 mb-4">
+        <div class="ocean-card profile-sidebar">
+            <div class="profile-header text-center">
+                <div class="profile-avatar-container">
+                    {% if user.profile_picture %}
+                    <img src="{{ url_for('static', filename=user.profile_picture) }}" alt="{{ user.name }}" class="profile-avatar">
+                    {% else %}
+                    <div class="profile-avatar-placeholder">
+                        <span>{{ user.name[:1] }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="profile-avatar-edit">
+                        <label for="profile-image-upload">
+                            <i class="fas fa-camera"></i>
+                        </label>
+                        <input type="file" id="profile-image-upload" class="d-none">
+                    </div>
+                </div>
+                <h4 class="mt-3 mb-1">{{ user.name }}</h4>
+                <p class="text-muted">@{{ user.username }}</p>
+                <div class="researcher-level d-flex align-items-center justify-content-center">
+                    <div class="level-badge me-2">
+                        <span>{{ user.level|default('1') }}</span>
+                    </div>
+                    <span>{{ user.rank_title|default('Novice Researcher') }}</span>
+                </div>
+            </div>
+            <div class="profile-nav">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#profile-info" data-bs-toggle="tab">
+                            <i class="fas fa-user me-2"></i>Profile Information
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#research-interests" data-bs-toggle="tab">
+                            <i class="fas fa-microscope me-2"></i>Research Interests
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#publications" data-bs-toggle="tab">
+                            <i class="fas fa-book me-2"></i>Publications
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#credentials" data-bs-toggle="tab">
+                            <i class="fas fa-certificate me-2"></i>Credentials
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#account-settings" data-bs-toggle="tab">
+                            <i class="fas fa-cog me-2"></i>Account Settings
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="profile-stats">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="stat-value">{{ user.projects|length }}</div>
+                        <div class="stat-label">Projects</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-value">{{ user.get_samples_count()|default(0) }}</div>
+                        <div class="stat-label">Samples</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-value">{{ user.publications|default([])|length }}</div>
+                        <div class="stat-label">Papers</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="ocean-card mt-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-award me-2"></i>Top Achievements</h5>
+            </div>
+            <div class="card-body">
+                {% if user.badges %}
+                <div class="row">
+                    {% for user_badge in user.badges[:6] %}
+                    <div class="col-4 text-center mb-3">
+                        <div class="badge-icon" data-bs-toggle="tooltip" title="{{ user_badge.badge.description }}">
+                            <i class="{{ user_badge.badge.icon }} fa-2x"></i>
+                        </div>
+                        <div class="badge-name small mt-1">{{ user_badge.badge.name }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-2">
+                    <a href="{{ url_for('gamification') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                {% else %}
+                <p class="text-center py-3 mb-0">Complete research activities to earn badges!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-9">
+        <div class="tab-content">
+            <!-- Profile Information Tab -->
+            <div class="tab-pane fade show active" id="profile-info">
+                <div class="ocean-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-user me-2"></i>Profile Information</h5>
+                        <button class="btn btn-sm btn-light" id="edit-profile-btn">
+                            <i class="fas fa-edit me-1"></i>Edit
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <form id="profile-form">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="name" class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" id="name" value="{{ user.name }}" disabled>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="title" class="form-label">Professional Title</label>
+                                    <input type="text" class="form-control" id="title" value="{{ user.title|default('') }}" disabled>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" id="email" value="{{ user.email }}" disabled>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="phone" class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="phone" value="{{ user.phone|default('') }}" disabled>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="institution" class="form-label">Institution</label>
+                                    <input type="text" class="form-control" id="institution" value="{{ user.institution|default('') }}" disabled>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="department" class="form-label">Department</label>
+                                    <input type="text" class="form-control" id="department" value="{{ user.department|default('') }}" disabled>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="bio" class="form-label">Biography</label>
+                                <textarea class="form-control" id="bio" rows="4" disabled>{{ user.bio|default('') }}</textarea>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" id="location" value="{{ user.location|default('') }}" disabled>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="website" class="form-label">Website</label>
+                                    <input type="url" class="form-control" id="website" value="{{ user.website|default('') }}" disabled>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="orcid" class="form-label">ORCID ID</label>
+                                    <input type="text" class="form-control" id="orcid" value="{{ user.orcid_id|default('') }}" disabled>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="researcher_id" class="form-label">Researcher ID</label>
+                                    <input type="text" class="form-control" id="researcher_id" value="{{ user.researcher_id|default('') }}" disabled>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end mt-4" id="profile-actions" style="display: none !important;">
+                                <button type="button" class="btn btn-secondary me-2" id="cancel-edit-btn">Cancel</button>
+                                <button type="submit" class="btn ocean-button">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Research Interests Tab -->
+            <div class="tab-pane fade" id="research-interests">
+                <div class="ocean-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-microscope me-2"></i>Research Interests</h5>
+                        <button class="btn btn-sm btn-light" id="edit-interests-btn">
+                            <i class="fas fa-edit me-1"></i>Edit
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <form id="interests-form">
+                            <div class="mb-3">
+                                <label for="research_summary" class="form-label">Research Summary</label>
+                                <textarea class="form-control" id="research_summary" rows="4" disabled>{{ user.research_interests|default('') }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Research Areas</label>
+                                <div class="research-tags">
+                                    {% if user.research_areas %}
+                                    {% for area in user.research_areas %}
+                                    <span class="badge bg-primary me-2 mb-2">{{ area }}</span>
+                                    {% endfor %}
+                                    {% else %}
+                                    <p class="text-muted">No research areas specified.</p>
+                                    {% endif %}
+                                </div>
+                                <div class="input-group mt-2" id="add-area-group" style="display: none;">
+                                    <input type="text" class="form-control" id="new-area" placeholder="Add research area">
+                                    <button class="btn btn-outline-primary" type="button" id="add-area-btn">Add</button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Species of Interest</label>
+                                <div class="species-tags">
+                                    {% if user.species_of_interest %}
+                                    {% for species in user.species_of_interest %}
+                                    <span class="badge bg-info me-2 mb-2">{{ species }}</span>
+                                    {% endfor %}
+                                    {% else %}
+                                    <p class="text-muted">No species of interest specified.</p>
+                                    {% endif %}
+                                </div>
+                                <div class="input-group mt-2" id="add-species-group" style="display: none;">
+                                    <input type="text" class="form-control" id="new-species" placeholder="Add species">
+                                    <button class="btn btn-outline-info" type="button" id="add-species-btn">Add</button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Research Methods</label>
+                                <div class="methods-tags">
+                                    {% if user.research_methods %}
+                                    {% for method in user.research_methods %}
+                                    <span class="badge bg-success me-2 mb-2">{{ method }}</span>
+                                    {% endfor %}
+                                    {% else %}
+                                    <p class="text-muted">No research methods specified.</p>
+                                    {% endif %}
+                                </div>
+                                <div class="input-group mt-2" id="add-method-group" style="display: none;">
+                                    <input type="text" class="form-control" id="new-method" placeholder="Add research method">
+                                    <button class="btn btn-outline-success" type="button" id="add-method-btn">Add</button>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end mt-4" id="interests-actions" style="display: none !important;">
+                                <button type="button" class="btn btn-secondary me-2" id="cancel-interests-btn">Cancel</button>
+                                <button type="submit" class="btn ocean-button">Save Changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Publications Tab -->
+            <div class="tab-pane fade" id="publications">
+                <div class="ocean-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-book me-2"></i>Publications</h5>
+                        <button class="btn btn-sm btn-light" id="add-publication-btn">
+                            <i class="fas fa-plus me-1"></i>Add
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        {% if user.publications %}
+                        <div class="publications-list">
+                            {% for publication in user.publications %}
+                            <div class="publication-item mb-4">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="mb-1">{{ publication.title }}</h6>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary me-1 edit-pub-btn" data-id="{{ publication.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger delete-pub-btn" data-id="{{ publication.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="mb-1 small">{{ publication.authors }}</p>
+                                <p class="mb-1 small text-muted">{{ publication.journal }}, {{ publication.year }}</p>
+                                <p class="mb-1 small">DOI: <a href="https://doi.org/{{ publication.doi }}" target="_blank">{{ publication.doi }}</a></p>
+                                {% if publication.abstract %}
+                                <div class="mt-2">
+                                    <a class="btn btn-sm btn-link p-0 toggle-abstract" data-bs-toggle="collapse" href="#abstract-{{ publication.id }}" role="button">
+                                        Show Abstract <i class="fas fa-chevron-down ms-1"></i>
+                                    </a>
+                                    <div class="collapse mt-2" id="abstract-{{ publication.id }}">
+                                        <div class="card card-body bg-light">
+                                            {{ publication.abstract }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <hr class="my-3">
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                            <p>No publications added yet.</p>
+                            <button class="btn btn-outline-primary" id="first-publication-btn">
+                                <i class="fas fa-plus me-1"></i>Add Your First Publication
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Credentials Tab -->
+            <div class="tab-pane fade" id="credentials">
+                <div class="ocean-card">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>Education</h5>
+                        <button class="btn btn-sm btn-light" id="add-education-btn">
+                            <i class="fas fa-plus me-1"></i>Add
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        {% if user.education %}
+                        <div class="timeline">
+                            {% for edu in user.education %}
+                            <div class="timeline-item">
+                                <div class="timeline-marker bg-primary"></div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="mb-1">{{ edu.degree }} in {{ edu.field }}</h6>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-primary me-1 edit-edu-btn" data-id="{{ edu.id }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger delete-edu-btn" data-id="{{ edu.id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p class="mb-1">{{ edu.institution }}</p>
+                                    <p class="mb-1 small text-muted">{{ edu.start_year }} - {{ edu.end_year|default('Present') }}</p>
+                                    {% if edu.description %}
+                                    <p class="small">{{ edu.description }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-graduation-cap fa-3x text-muted mb-3"></i>
+                            <p>No education history added yet.</p>
+                            <button class="btn btn-outline-primary" id="first-education-btn">
+                                <i class="fas fa-plus me-1"></i>Add Education
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="ocean-card mt-4">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-briefcase me-2"></i>Work Experience</h5>
+                        <button class="btn btn-sm btn-light" id="add-experience-btn">
+                            <i class="fas fa-plus me-1"></i>Add
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        {% if user.experience %}
+                        <div class="timeline">
+                            {% for exp in user.experience %}
+                            <div class="timeline-item">
+                                <div class="timeline-marker bg-info"></div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="mb-1">{{ exp.position }}</h6>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-primary me-1 edit-exp-btn" data-id="{{ exp.id }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger delete-exp-btn" data-id="{{ exp.id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p class="mb-1">{{ exp.organization }}</p>
+                                    <p class="mb-1 small text-muted">{{ exp.start_date.strftime('%b %Y') }} - {{ exp.end_date.strftime('%b %Y') if exp.end_date else 'Present' }}</p>
+                                    {% if exp.description %}
+                                    <p class="small">{{ exp.description }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-briefcase fa-3x text-muted mb-3"></i>
+                            <p>No work experience added yet.</p>
+                            <button class="btn btn-outline-primary" id="first-experience-btn">
+                                <i class="fas fa-plus me-1"></i>Add Work Experience
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="ocean-card mt-4">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-certificate me-2"></i>Certifications</h5>
+                        <button class="btn btn-sm btn-light" id="add-certification-btn">
+                            <i class="fas fa-plus me-1"></i>Add
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        {% if user.certifications %}
+                        <div class="row">
+                            {% for cert in user.certifications %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="card-title">{{ cert.name }}</h6>
+                                            <div>
+                                                <button class="btn btn-sm btn-outline-primary me-1 edit-cert-btn" data-id="{{ cert.id }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger delete-cert-btn" data-id="{{ cert.id }}">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p class="card-text small">{{ cert.issuer }}</p>
+                                        <p class="card-text small text-muted">Issued: {{ cert.issue_date.strftime('%b %Y') }}</p>
+                                        {% if cert.expiry_date %}
+                                        <p class="card-text small text-muted">Expires: {{ cert.expiry_date.strftime('%b %Y') }}</p>
+                                        {% else %}
+                                        <p class="card-text small text-muted">No expiration</p>
+                                        {% endif %}
+                                        {% if cert.credential_id %}
+                                        <p class="card-text small">ID: {{ cert.credential_id }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-certificate fa-3x text-muted mb-3"></i>
+                            <p>No certifications added yet.</p>
+                            <button class="btn btn-outline-primary" id="first-certification-btn">
+                                <i class="fas fa-plus me-1"></i>Add Certification
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Account Settings Tab -->
+            <div class="tab-pane fade" id="account-settings">
+                <div class="ocean-card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Account Security</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="password-form">
+                            <div class="mb-3">
+                                <label for="current_password" class="form-label">Current Password</label>
+                                <input type="password" class="form-control" id="current_password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="new_password" class="form-label">New Password</label>
+                                <input type="password" class="form-control" id="new_password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirm_password" class="form-label">Confirm New Password</label>
+                                <input type="password" class="form-control" id="confirm_password" required>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn ocean-button">Update Password</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        
+        <div class="card mb-4 ocean-card">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Recent Projects</h5>
+                <a href="{{ url_for('projects') }}" class="btn btn-sm ocean-button-sm">View All</a>
+            </div>
+            <div class="card-body">
+                {% if user.projects %}
+                <div class="list-group">
+                    {% for project in user.projects[:5] %}
+                    <a href="{{ url_for('project_detail', project_id=project.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ project.title }}</h6>
+                            <small>{{ project.updated_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        <p class="mb-1 text-truncate">{{ project.description }}</p>
+                        <small>
+                            <i class="fas fa-flask me-1"></i>{{ project.samples|length }} samples
+                            {% if project.is_public %}
+                            <span class="ms-2"><i class="fas fa-globe me-1"></i>Public</span>
+                            {% else %}
+                            <span class="ms-2"><i class="fas fa-lock me-1"></i>Private</span>
+                            {% endif %}
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-center mb-0">No projects yet. <a href="{{ url_for('new_project') }}" class="text-primary">Create your first project</a>.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mb-4 ocean-card">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Recent Analyses</h5>
+            </div>
+            <div class="card-body">
+                {% set analyses = user.get_recent_analyses(5) %}
+                {% if analyses %}
+                <div class="list-group">
+                    {% for analysis in analyses %}
+                    <a href="{{ url_for('analysis_results', analysis_id=analysis.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ analysis.sample.name }}</h6>
+                            <small>{{ analysis.created_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        <p class="mb-1">{{ analysis.analysis_type }}</p>
+                        <small>
+                            <i class="fas fa-project-diagram me-1"></i>{{ analysis.sample.project.title }}
+                            <span class="ms-2">
+                                {% if analysis.status == 'completed' %}
+                                <i class="fas fa-check-circle text-success me-1"></i>Completed
+                                {% elif analysis.status == 'processing' %}
+                                <i class="fas fa-spinner fa-spin text-warning me-1"></i>Processing
+                                {% elif analysis.status == 'failed' %}
+                                <i class="fas fa-times-circle text-danger me-1"></i>Failed
+                                {% else %}
+                                <i class="fas fa-clock text-secondary me-1"></i>Pending
+                                {% endif %}
+                            </span>
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-center mb-0">No analyses yet. <a href="{{ url_for('projects') }}" class="text-primary">Upload samples</a> to your projects and start analyzing!</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mb-4 ocean-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>Collaborations</h5>
+            </div>
+            <div class="card-body">
+                {% if user.collaborative_projects %}
+                <div class="list-group">
+                    {% for project in user.collaborative_projects %}
+                    <a href="{{ url_for('project_detail', project_id=project.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ project.title }}</h6>
+                            <small>Owner: {{ project.owner.name }}</small>
+                        </div>
+                        <p class="mb-1 text-truncate">{{ project.description }}</p>
+                        <small><i class="fas fa-flask me-1"></i>{{ project.samples|length }} samples</small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-center mb-0">You are not collaborating on any projects yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ocean Wave Animation -->
+<div class="ocean-container">
+    <div class="wave"></div>
+    <div class="wave"></div>
+</div>
+
+<!-- Bubble Animation -->
+<div class="bubbles">
+    {% for i in range(15) %}
+    <div class="bubble"></div>
+    {% endfor %}
+</div>
+{% endblock %}

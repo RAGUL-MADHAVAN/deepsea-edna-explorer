@@ -1,0 +1,903 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Report Generation{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder me-1"></i>{{ project.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-file-alt me-1"></i>Report Generation</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="display-5 fw-bold text-primary"><i class="fas fa-file-pdf me-2"></i>Report Generation</h1>
+        <p class="lead">Create professional reports from your eDNA analysis results.</p>
+        <div class="ocean-divider mb-4"></div>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <div class="btn-group">
+            <button type="button" class="btn ocean-button" id="saveReportBtn">
+                <i class="fas fa-save me-1"></i>Save Report
+            </button>
+            <button type="button" class="btn ocean-button-secondary" id="generateReportBtn">
+                <i class="fas fa-file-export me-1"></i>Generate Report
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Report Builder Panel -->
+    <div class="col-md-4 mb-4">
+        <div class="card ocean-card sticky-top" style="top: 1rem; z-index: 100;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Report Builder</h5>
+            </div>
+            <div class="card-body">
+                <form id="reportForm">
+                    <!-- Report Details -->
+                    <div class="mb-3">
+                        <label for="reportTitle" class="form-label">Report Title</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-heading"></i></span>
+                            <input type="text" class="form-control ocean-input" id="reportTitle" value="{{ project.title }} - eDNA Analysis Report">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="reportDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="reportDescription" rows="2" placeholder="Brief description of this report">Comprehensive analysis of deep-sea eDNA samples collected from {{ project.location }}.</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="reportAuthor" class="form-label">Author</label>
+                        <input type="text" class="form-control" id="reportAuthor" value="{{ current_user.full_name }}">
+                    </div>
+                    
+                    <!-- Report Sections -->
+                    <div class="mb-3">
+                        <label class="form-label">Report Sections</label>
+                        <div class="list-group" id="reportSections">
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center active" data-section="title">
+                                <div>
+                                    <i class="fas fa-heading me-2"></i>Title Page
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked disabled>
+                                </div>
+                            </div>
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-section="executive_summary">
+                                <div>
+                                    <i class="fas fa-file-alt me-2"></i>Executive Summary
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </div>
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-section="introduction">
+                                <div>
+                                    <i class="fas fa-info-circle me-2"></i>Introduction
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </div>
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-section="methodology">
+                                <div>
+                                    <i class="fas fa-vial me-2"></i>Methodology
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </div>
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-section="results">
+                                <div>
+                                    <i class="fas fa-chart-bar me-2"></i>Results
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </div>
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-section="discussion">
+                                <div>
+                                    <i class="fas fa-comments me-2"></i>Discussion
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </div>
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-section="conclusion">
+                                <div>
+                                    <i class="fas fa-flag-checkered me-2"></i>Conclusion
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </div>
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-section="references">
+                                <div>
+                                    <i class="fas fa-book me-2"></i>References
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </div>
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-section="appendix">
+                                <div>
+                                    <i class="fas fa-paperclip me-2"></i>Appendix
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Visualizations to Include -->
+                    <div class="mb-3">
+                        <label class="form-label">Visualizations to Include</label>
+                        <div class="list-group" id="reportVisualizations">
+                            {% for visualization in project.visualizations %}
+                            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="{{ visualization.icon }} me-2"></i>{{ visualization.name }}
+                                    <small class="d-block text-muted">{{ visualization.type }}</small>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Report Format -->
+                    <div class="mb-3">
+                        <label for="reportFormat" class="form-label">Report Format</label>
+                        <select class="form-select" id="reportFormat">
+                            <option value="pdf">PDF Document</option>
+                            <option value="docx">Word Document (.docx)</option>
+                            <option value="html">Web Page (.html)</option>
+                            <option value="pptx">PowerPoint Presentation (.pptx)</option>
+                            <option value="markdown">Markdown (.md)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Report Template -->
+                    <div class="mb-3">
+                        <label for="reportTemplate" class="form-label">Report Template</label>
+                        <select class="form-select" id="reportTemplate">
+                            <option value="scientific">Scientific Journal</option>
+                            <option value="executive">Executive Summary</option>
+                            <option value="technical">Technical Report</option>
+                            <option value="presentation">Presentation</option>
+                            <option value="custom">Custom Template</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Advanced Options -->
+                    <div class="mb-3">
+                        <a class="d-flex justify-content-between align-items-center text-decoration-none" data-bs-toggle="collapse" href="#advancedOptions" role="button" aria-expanded="false" aria-controls="advancedOptions">
+                            <span><i class="fas fa-cog me-2"></i>Advanced Options</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </a>
+                        <div class="collapse mt-2" id="advancedOptions">
+                            <div class="card card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="includeRawData">
+                                    <label class="form-check-label" for="includeRawData">
+                                        Include raw data tables
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="includeMetadata" checked>
+                                    <label class="form-check-label" for="includeMetadata">
+                                        Include sample metadata
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="includeMethodDetails" checked>
+                                    <label class="form-check-label" for="includeMethodDetails">
+                                        Include detailed methodology
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="includeCitation" checked>
+                                    <label class="form-check-label" for="includeCitation">
+                                        Include citation information
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="includeWatermark">
+                                    <label class="form-check-label" for="includeWatermark">
+                                        Add watermark
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="enableInteractive">
+                                    <label class="form-check-label" for="enableInteractive">
+                                        Enable interactive elements (HTML only)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Report Preview Panel -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Report Preview</h5>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="previewRefreshBtn">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="previewFullscreenBtn">
+                        <i class="fas fa-expand me-1"></i>Fullscreen
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="report-preview">
+                    <!-- Title Page Section -->
+                    <div class="report-section" id="section-title">
+                        <div class="report-title-page text-center py-5">
+                            <div class="mb-5">
+                                <img src="/static/images/logo.png" alt="DeepSea eDNA Explorer" width="150">
+                            </div>
+                            <h1 class="display-4 fw-bold mb-3" id="preview-title">{{ project.title }} - eDNA Analysis Report</h1>
+                            <p class="lead mb-4" id="preview-description">Comprehensive analysis of deep-sea eDNA samples collected from {{ project.location }}.</p>
+                            <div class="mb-4">
+                                <p class="mb-1">Prepared by:</p>
+                                <h5 id="preview-author">{{ current_user.full_name }}</h5>
+                                <p>{{ current_user.institution }}</p>
+                            </div>
+                            <p class="text-muted">{{ current_date|datetimeformat('%B %d, %Y') }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Executive Summary Section -->
+                    <div class="report-section" id="section-executive_summary">
+                        <div class="report-content-page py-4">
+                            <h2 class="mb-4">Executive Summary</h2>
+                            <div class="editable-content" contenteditable="true">
+                                <p>This report presents the findings from environmental DNA (eDNA) analysis of deep-sea samples collected from {{ project.location }} at depths ranging from {{ project.depth_min }} to {{ project.depth_max }} meters. The study aimed to characterize the biodiversity of this deep-sea ecosystem using metabarcoding techniques.</p>
+                                
+                                <p>Key findings include:</p>
+                                <ul>
+                                    <li>Identification of {{ project.total_taxa }} distinct taxonomic units across {{ project.samples|length }} samples</li>
+                                    <li>Discovery of previously undocumented species in this region</li>
+                                    <li>Correlation between depth and community composition</li>
+                                    <li>Evidence of seasonal variation in biodiversity patterns</li>
+                                </ul>
+                                
+                                <p>These results provide valuable insights into deep-sea biodiversity and contribute to our understanding of marine ecosystems in the {{ project.location }} region.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Introduction Section -->
+                    <div class="report-section" id="section-introduction">
+                        <div class="report-content-page py-4">
+                            <h2 class="mb-4">Introduction</h2>
+                            <div class="editable-content" contenteditable="true">
+                                <p>Deep-sea environments remain among the least explored ecosystems on Earth, despite covering more than 60% of the planet's surface. Traditional sampling methods in these environments are challenging, expensive, and often invasive. Environmental DNA (eDNA) analysis offers a non-invasive alternative for biodiversity assessment, allowing researchers to detect organisms through the DNA they release into the environment.</p>
+                                
+                                <p>This project utilized eDNA metabarcoding to investigate the biodiversity of deep-sea communities in {{ project.location }}. By collecting water samples at various depths and analyzing the DNA present, we aimed to:</p>
+                                
+                                <ol>
+                                    <li>Characterize the taxonomic diversity across different depths</li>
+                                    <li>Identify patterns in community composition</li>
+                                    <li>Detect rare or previously undocumented species</li>
+                                    <li>Establish baseline data for future monitoring efforts</li>
+                                </ol>
+                                
+                                <p>The findings from this study contribute to our understanding of deep-sea ecosystems and provide valuable data for conservation and management efforts in the region.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Methodology Section -->
+                    <div class="report-section" id="section-methodology">
+                        <div class="report-content-page py-4">
+                            <h2 class="mb-4">Methodology</h2>
+                            <div class="editable-content" contenteditable="true">
+                                <h4>Sample Collection</h4>
+                                <p>Water samples were collected from {{ project.location }} between {{ project.date_start|datetimeformat('%B %Y') }} and {{ project.date_end|datetimeformat('%B %Y') }}. Sampling was conducted at {{ project.samples|length }} stations across depths ranging from {{ project.depth_min }} to {{ project.depth_max }} meters using Niskin bottles mounted on a CTD rosette. At each sampling point, 2L of seawater was filtered through 0.22 μm Sterivex filters, which were preserved in buffer solution and stored at -80°C until DNA extraction.</p>
+                                
+                                <h4>DNA Extraction and Sequencing</h4>
+                                <p>DNA was extracted using the DNeasy PowerWater Kit (Qiagen) following the manufacturer's protocol. The {{ project.target_gene }} gene region was amplified using primers {{ project.primer_forward }} and {{ project.primer_reverse }}. PCR products were purified, indexed, and sequenced on the {{ project.sequencing_platform }} platform with {{ project.sequencing_chemistry }} chemistry, generating {{ project.read_length }} paired-end reads.</p>
+                                
+                                <h4>Bioinformatic Analysis</h4>
+                                <p>Raw sequence data was processed using the DeepSea eDNA Explorer pipeline. Quality filtering removed sequences with quality scores below Q30. Sequences were then dereplicated, chimeras were removed using UCHIME, and operational taxonomic units (OTUs) were clustered at 97% similarity using UPARSE. Taxonomy was assigned using the {{ project.reference_database }} database with a minimum confidence threshold of {{ project.confidence_threshold }}.</p>
+                                
+                                <h4>Statistical Analysis</h4>
+                                <p>Alpha diversity metrics (Shannon, Simpson, and Chao1 indices) were calculated for each sample. Beta diversity was assessed using Bray-Curtis dissimilarity and visualized with non-metric multidimensional scaling (NMDS). Statistical significance of observed patterns was tested using PERMANOVA. Correlation between environmental variables and community composition was analyzed using Canonical Correspondence Analysis (CCA).</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Results Section -->
+                    <div class="report-section" id="section-results">
+                        <div class="report-content-page py-4">
+                            <h2 class="mb-4">Results</h2>
+                            <div class="editable-content" contenteditable="true">
+                                <h4>Sequencing Results</h4>
+                                <p>A total of {{ project.total_reads }} sequences were obtained across all samples, with an average of {{ project.avg_reads_per_sample }} sequences per sample. After quality filtering and chimera removal, {{ project.filtered_reads }} sequences remained for analysis. These sequences were clustered into {{ project.total_otus }} OTUs, of which {{ project.identified_otus }} ({{ (project.identified_otus / project.total_otus * 100)|round }}%) could be assigned taxonomy at the genus level or higher.</p>
+                                
+                                <h4>Taxonomic Composition</h4>
+                                <p>The taxonomic analysis revealed a diverse community dominated by {{ project.dominant_phylum }} ({{ project.dominant_phylum_percentage }}% of sequences), followed by {{ project.secondary_phylum }} ({{ project.secondary_phylum_percentage }}%). At the class level, {{ project.dominant_class }} was most abundant, representing {{ project.dominant_class_percentage }}% of all sequences. Notable findings include the detection of {{ project.rare_taxa_count }} rare taxa that occurred in fewer than 5% of samples.</p>
+                                
+                                <div class="text-center my-4">
+                                    <img src="{{ project.visualizations[0].image_url }}" alt="Taxonomic Composition" class="img-fluid rounded" style="max-width: 80%;">
+                                    <p class="figure-caption mt-2">Figure 1: Taxonomic composition at the phylum level across all samples.</p>
+                                </div>
+                                
+                                <h4>Depth Distribution Patterns</h4>
+                                <p>Clear patterns in community composition were observed across depth gradients. Species richness peaked at {{ project.peak_richness_depth }} meters and declined with increasing depth. Multivariate analysis revealed distinct community clusters corresponding to epipelagic (0-200m), mesopelagic (200-1000m), and bathypelagic (>1000m) zones.</p>
+                                
+                                <div class="text-center my-4">
+                                    <img src="{{ project.visualizations[1].image_url }}" alt="Depth Distribution" class="img-fluid rounded" style="max-width: 80%;">
+                                    <p class="figure-caption mt-2">Figure 2: Species richness across depth gradient.</p>
+                                </div>
+                                
+                                <h4>Diversity Analysis</h4>
+                                <p>Alpha diversity metrics showed significant variation among sampling sites. Shannon diversity index values ranged from {{ project.min_shannon }} to {{ project.max_shannon }}, with highest diversity observed at mid-depths. Beta diversity analysis indicated that depth was the strongest factor explaining community dissimilarity (PERMANOVA, R² = {{ project.depth_r_squared }}, p < 0.001), followed by temperature (R² = {{ project.temp_r_squared }}, p < 0.01).</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Discussion Section -->
+                    <div class="report-section" id="section-discussion">
+                        <div class="report-content-page py-4">
+                            <h2 class="mb-4">Discussion</h2>
+                            <div class="editable-content" contenteditable="true">
+                                <p>The results of this study provide valuable insights into the biodiversity patterns of deep-sea communities in {{ project.location }}. The observed depth-related patterns in community composition align with previous studies in other oceanic regions, suggesting that vertical stratification is a fundamental feature of marine ecosystems.</p>
+                                
+                                <p>The high diversity observed at mid-depths ({{ project.peak_richness_depth }} meters) corresponds to the oxygen minimum zone in this region, which is known to harbor specialized microbial communities adapted to low-oxygen conditions. This finding supports the hypothesis that environmental stress can promote niche specialization and contribute to maintaining biodiversity in marine systems.</p>
+                                
+                                <p>The detection of previously undocumented species highlights the value of eDNA metabarcoding for discovering cryptic diversity in deep-sea environments. Traditional sampling methods may have overlooked these taxa due to their rarity or small size. However, it's important to note the limitations of eDNA analysis, including potential biases in DNA extraction, PCR amplification, and incomplete reference databases for taxonomic assignment.</p>
+                                
+                                <p>The strong correlation between community composition and environmental variables (particularly depth and temperature) suggests that these factors play a crucial role in structuring deep-sea communities. As climate change continues to alter oceanic conditions, including temperature regimes and oxygen levels, these communities may experience significant shifts in composition and function.</p>
+                                
+                                <p>Future research should focus on expanding the temporal and spatial coverage of sampling to better understand seasonal and regional variations in biodiversity patterns. Additionally, incorporating functional gene analysis would provide insights into the ecological roles of these communities and their potential responses to environmental change.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Conclusion Section -->
+                    <div class="report-section" id="section-conclusion">
+                        <div class="report-content-page py-4">
+                            <h2 class="mb-4">Conclusion</h2>
+                            <div class="editable-content" contenteditable="true">
+                                <p>This study demonstrates the effectiveness of eDNA metabarcoding for characterizing deep-sea biodiversity in {{ project.location }}. The findings reveal complex patterns in community composition across depth gradients and provide baseline data for future monitoring efforts in this region.</p>
+                                
+                                <p>Key conclusions include:</p>
+                                <ul>
+                                    <li>eDNA metabarcoding successfully detected a diverse array of taxa across multiple trophic levels</li>
+                                    <li>Depth is a primary driver of community composition in this ecosystem</li>
+                                    <li>Mid-depth zones harbor the highest biodiversity, potentially due to unique environmental conditions</li>
+                                    <li>Several previously undocumented species were identified, highlighting the value of this approach for biodiversity discovery</li>
+                                </ul>
+                                
+                                <p>These results contribute to our understanding of deep-sea ecosystems and provide valuable information for conservation and management efforts. As anthropogenic pressures on marine environments continue to increase, comprehensive biodiversity assessments using methods like eDNA analysis will be essential for monitoring ecosystem health and informing policy decisions.</p>
+                                
+                                <p>The data generated in this study will be made publicly available through the DeepSea eDNA Explorer platform, facilitating further analysis and integration with other research efforts in marine biodiversity.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- References Section -->
+                    <div class="report-section" id="section-references">
+                        <div class="report-content-page py-4">
+                            <h2 class="mb-4">References</h2>
+                            <div class="editable-content" contenteditable="true">
+                                <ol class="references">
+                                    <li>Andruszkiewicz, E. A., Starks, H. A., Chavez, F. P., Sassoubre, L. M., Block, B. A., & Boehm, A. B. (2017). Biomonitoring of marine vertebrates in Monterey Bay using eDNA metabarcoding. PLOS ONE, 12(4), e0176343.</li>
+                                    <li>Bohmann, K., Evans, A., Gilbert, M. T. P., Carvalho, G. R., Creer, S., Knapp, M., Yu, D. W., & de Bruyn, M. (2014). Environmental DNA for wildlife biology and biodiversity monitoring. Trends in Ecology & Evolution, 29(6), 358-367.</li>
+                                    <li>Deiner, K., Bik, H. M., Mächler, E., Seymour, M., Lacoursière-Roussel, A., Altermatt, F., Creer, S., Bista, I., Lodge, D. M., de Vere, N., Pfrender, M. E., & Bernatchez, L. (2017). Environmental DNA metabarcoding: Transforming how we survey animal and plant communities. Molecular Ecology, 26(21), 5872-5895.</li>
+                                    <li>Djurhuus, A., Port, J., Closek, C. J., Yamahara, K. M., Romero-Maraccini, O., Walz, K. R., Goldsmith, D. B., Michisaki, R., Breitbart, M., Boehm, A. B., & Chavez, F. P. (2017). Evaluation of filtration and DNA extraction methods for environmental DNA biodiversity assessments across multiple trophic levels. Frontiers in Marine Science, 4, 314.</li>
+                                    <li>Miya, M., Sato, Y., Fukunaga, T., Sado, T., Poulsen, J. Y., Sato, K., Minamoto, T., Yamamoto, S., Yamanaka, H., Araki, H., Kondoh, M., & Iwasaki, W. (2015). MiFish, a set of universal PCR primers for metabarcoding environmental DNA from fishes: Detection of more than 230 subtropical marine species. Royal Society Open Science, 2(7), 150088.</li>
+                                    <li>Pawlowski, J., Esling, P., Lejzerowicz, F., Cedhagen, T., & Wilding, T. A. (2014). Environmental monitoring through protist next-generation sequencing metabarcoding: Assessing the impact of fish farming on benthic foraminifera communities. Molecular Ecology Resources, 14(6), 1129-1140.</li>
+                                    <li>Thomsen, P. F., & Willerslev, E. (2015). Environmental DNA – An emerging tool in conservation for monitoring past and present biodiversity. Biological Conservation, 183, 4-18.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Appendix Section -->
+                    <div class="report-section" id="section-appendix" style="display: none;">
+                        <div class="report-content-page py-4">
+                            <h2 class="mb-4">Appendix</h2>
+                            <div class="editable-content" contenteditable="true">
+                                <h4>Appendix A: Supplementary Tables</h4>
+                                <p>Table A1: Complete list of all OTUs detected across all samples with taxonomic assignments and read counts.</p>
+                                <p>Table A2: Environmental parameters measured at each sampling station.</p>
+                                <p>Table A3: Detailed alpha diversity metrics for each sample.</p>
+                                
+                                <h4>Appendix B: Quality Control Metrics</h4>
+                                <p>Table B1: Sequencing quality metrics for all samples.</p>
+                                <p>Table B2: Results of negative and positive controls.</p>
+                                
+                                <h4>Appendix C: Additional Visualizations</h4>
+                                <p>Figure C1: Rarefaction curves for all samples.</p>
+                                <p>Figure C2: NMDS plots showing community similarity among samples.</p>
+                                <p>Figure C3: Heatmap of the top 50 most abundant taxa across all samples.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Report Templates -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Saved Report Templates</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for template in saved_templates %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">{{ template.name }}</h6>
+                                <p class="card-text small text-muted">{{ template.description }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">Created: {{ template.created_at|datetimeformat }}</small>
+                                    <button type="button" class="btn btn-sm btn-outline-primary load-template" data-template-id="{{ template.id }}">
+                                        <i class="fas fa-file-import me-1"></i>Load
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 border-dashed">
+                            <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+                                <i class="fas fa-plus-circle fa-2x mb-2 text-muted"></i>
+                                <h6 class="card-title">Save Current as Template</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#saveTemplateModal">
+                                    <i class="fas fa-save me-1"></i>Save Template
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Previous Reports -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Previous Reports</h5>
+            </div>
+            <div class="card-body">
+                {% if previous_reports %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Report Name</th>
+                                <th>Format</th>
+                                <th>Created</th>
+                                <th>Size</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report in previous_reports %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-file-{{ report.format }} fa-lg text-primary me-2"></i>
+                                        <div>
+                                            <div class="fw-bold">{{ report.title }}</div>
+                                            <div class="small text-muted">{{ report.description|truncate(50) }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ report.format|upper }}</td>
+                                <td>{{ report.created_at|datetimeformat }}</td>
+                                <td>{{ report.file_size }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('download_report', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download me-1"></i>Download
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#shareReportModal{{ report.id }}">
+                                            <i class="fas fa-share-alt me-1"></i>Share
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteReportModal{{ report.id }}">
+                                            <i class="fas fa-trash-alt me-1"></i>Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Share Report Modal -->
+                            <div class="modal fade" id="shareReportModal{{ report.id }}" tabindex="-1" aria-labelledby="shareReportModalLabel{{ report.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="shareReportModalLabel{{ report.id }}">Share Report</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Share "{{ report.title }}" with others:</p>
+                                            
+                                            <div class="mb-3">
+                                                <label for="shareReportLink{{ report.id }}" class="form-label">Report Link</label>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control" id="shareReportLink{{ report.id }}" value="https://deepseaedna.org/reports/{{ report.share_id }}" readonly>
+                                                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('shareReportLink{{ report.id }}')">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label">Share via</label>
+                                                <div class="d-flex gap-2">
+                                                    <a href="mailto:?subject=DeepSea eDNA Report: {{ report.title }}&body=I'd like to share this eDNA analysis report with you: https://deepseaedna.org/reports/{{ report.share_id }}" class="btn btn-outline-primary">
+                                                        <i class="fas fa-envelope me-1"></i>Email
+                                                    </a>
+                                                    <a href="https://twitter.com/intent/tweet?text=Check out this DeepSea eDNA analysis report: https://deepseaedna.org/reports/{{ report.share_id }}" target="_blank" class="btn btn-outline-primary">
+                                                        <i class="fab fa-twitter me-1"></i>Twitter
+                                                    </a>
+                                                    <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://deepseaedna.org/reports/{{ report.share_id }}" target="_blank" class="btn btn-outline-primary">
+                                                        <i class="fab fa-linkedin me-1"></i>LinkedIn
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            
+                                            <hr>
+                                            
+                                            <div class="mb-3">
+                                                <label for="shareReportEmails{{ report.id }}" class="form-label">Email to Colleagues</label>
+                                                <textarea class="form-control" id="shareReportEmails{{ report.id }}" rows="2" placeholder="Enter email addresses separated by commas"></textarea>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="shareReportMessage{{ report.id }}" class="form-label">Message (Optional)</label>
+                                                <textarea class="form-control" id="shareReportMessage{{ report.id }}" rows="2" placeholder="Add a personal message"></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            <button type="button" class="btn btn-primary" id="sendReportEmailBtn{{ report.id }}">
+                                                <i class="fas fa-paper-plane me-1"></i>Send
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Delete Report Modal -->
+                            <div class="modal fade" id="deleteReportModal{{ report.id }}" tabindex="-1" aria-labelledby="deleteReportModalLabel{{ report.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteReportModalLabel{{ report.id }}">Delete Report</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete the report "{{ report.title }}"?</p>
+                                            <p class="text-danger">This action cannot be undone.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form method="POST" action="{{ url_for('delete_report', report_id=report.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="btn btn-danger">
+                                                    <i class="fas fa-trash-alt me-1"></i>Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>No previous reports found. Generate your first report using the form above.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Save Template Modal -->
+<div class="modal fade" id="saveTemplateModal" tabindex="-1" aria-labelledby="saveTemplateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="saveTemplateModalLabel">Save as Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="saveTemplateForm">
+                    <div class="mb-3">
+                        <label for="templateName" class="form-label">Template Name</label>
+                        <input type="text" class="form-control" id="templateName" placeholder="e.g., Scientific Report Template">
+                    </div>
+                    <div class="mb-3">
+                        <label for="templateDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="templateDescription" rows="2" placeholder="Brief description of this template"></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="templateIsPublic">
+                        <label class="form-check-label" for="templateIsPublic">
+                            Make template available to all team members
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveTemplateBtn">
+                    <i class="fas fa-save me-1"></i>Save Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Report Modal -->
+<div class="modal fade" id="generateReportModal" tabindex="-1" aria-labelledby="generateReportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="generateReportModalLabel">Generate Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Your report is being generated. This may take a few moments.</p>
+                <div class="progress mb-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+                </div>
+                <div id="generationStatus" class="small text-muted">Initializing...</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" class="btn btn-primary disabled" id="downloadGeneratedReportBtn">
+                    <i class="fas fa-download me-1"></i>Download Report
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle report sections based on checkboxes
+        document.querySelectorAll('#reportSections .form-check-input').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                const sectionId = this.closest('.list-group-item').dataset.section;
+                const sectionElement = document.getElementById('section-' + sectionId);
+                
+                if (this.checked) {
+                    sectionElement.style.display = 'block';
+                    this.closest('.list-group-item').classList.add('active');
+                } else {
+                    sectionElement.style.display = 'none';
+                    this.closest('.list-group-item').classList.remove('active');
+                }
+            });
+        });
+        
+        // Update report title, description, and author in preview
+        document.getElementById('reportTitle').addEventListener('input', function() {
+            document.getElementById('preview-title').textContent = this.value;
+        });
+        
+        document.getElementById('reportDescription').addEventListener('input', function() {
+            document.getElementById('preview-description').textContent = this.value;
+        });
+        
+        document.getElementById('reportAuthor').addEventListener('input', function() {
+            document.getElementById('preview-author').textContent = this.value;
+        });
+        
+        // Refresh preview button
+        document.getElementById('previewRefreshBtn').addEventListener('click', function() {
+            // In a real application, this would update the preview with the latest content
+            alert('Preview refreshed!');
+        });
+        
+        // Fullscreen preview button
+        document.getElementById('previewFullscreenBtn').addEventListener('click', function() {
+            const reportPreview = document.querySelector('.report-preview');
+            
+            if (reportPreview.requestFullscreen) {
+                reportPreview.requestFullscreen();
+            } else if (reportPreview.webkitRequestFullscreen) { /* Safari */
+                reportPreview.webkitRequestFullscreen();
+            } else if (reportPreview.msRequestFullscreen) { /* IE11 */
+                reportPreview.msRequestFullscreen();
+            }
+        });
+        
+        // Save report button
+        document.getElementById('saveReportBtn').addEventListener('click', function() {
+            // In a real application, this would save the current report state
+            alert('Report saved successfully!');
+        });
+        
+        // Generate report button
+        document.getElementById('generateReportBtn').addEventListener('click', function() {
+            // Show the generation modal
+            const generateModal = new bootstrap.Modal(document.getElementById('generateReportModal'));
+            generateModal.show();
+            
+            // Simulate report generation progress
+            const progressBar = document.querySelector('#generateReportModal .progress-bar');
+            const statusText = document.getElementById('generationStatus');
+            const downloadBtn = document.getElementById('downloadGeneratedReportBtn');
+            
+            let progress = 0;
+            const interval = setInterval(function() {
+                progress += 5;
+                progressBar.style.width = progress + '%';
+                progressBar.setAttribute('aria-valuenow', progress);
+                
+                // Update status text based on progress
+                if (progress < 20) {
+                    statusText.textContent = 'Preparing report content...';
+                } else if (progress < 40) {
+                    statusText.textContent = 'Generating visualizations...';
+                } else if (progress < 60) {
+                    statusText.textContent = 'Formatting document...';
+                } else if (progress < 80) {
+                    statusText.textContent = 'Applying template styles...';
+                } else if (progress < 100) {
+                    statusText.textContent = 'Finalizing report...';
+                } else {
+                    statusText.textContent = 'Report generated successfully!';
+                    downloadBtn.classList.remove('disabled');
+                    downloadBtn.href = '/reports/download/temp-report-id';
+                    clearInterval(interval);
+                }
+            }, 200);
+        });
+        
+        // Save template button
+        document.getElementById('saveTemplateBtn').addEventListener('click', function() {
+            const templateName = document.getElementById('templateName').value;
+            const templateDescription = document.getElementById('templateDescription').value;
+            
+            if (!templateName) {
+                alert('Please enter a template name.');
+                return;
+            }
+            
+            // In a real application, this would save the template
+            alert('Template "' + templateName + '" saved successfully!');
+            
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('saveTemplateModal'));
+            modal.hide();
+        });
+        
+        // Load template buttons
+        document.querySelectorAll('.load-template').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const templateId = this.dataset.templateId;
+                
+                // In a real application, this would load the template
+                alert('Template loaded successfully!');
+            });
+        });
+        
+        // Send report email buttons
+        document.querySelectorAll('[id^="sendReportEmailBtn"]').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const reportId = this.id.replace('sendReportEmailBtn', '');
+                const emails = document.getElementById('shareReportEmails' + reportId).value;
+                
+                if (!emails) {
+                    alert('Please enter at least one email address.');
+                    return;
+                }
+                
+                // In a real application, this would send the emails
+                alert('Report shared via email successfully!');
+                
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('shareReportModal' + reportId));
+                modal.hide();
+            });
+        });
+    });
+    
+    // Helper function to copy text to clipboard
+    function copyToClipboard(elementId) {
+        const element = document.getElementById(elementId);
+        element.select();
+        document.execCommand('copy');
+        alert('Copied to clipboard!');
+    }
+</script>
+
+<style>
+    /* Report Preview Styles */
+    .report-preview {
+        background-color: white;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        min-height: 800px;
+    }
+    
+    .report-section {
+        margin-bottom: 2rem;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .report-section:last-child {
+        border-bottom: none;
+    }
+    
+    .report-title-page {
+        min-height: 600px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .editable-content {
+        border: 1px dashed transparent;
+        padding: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    
+    .editable-content:hover {
+        border-color: #ccc;
+        background-color: #f9f9f9;
+    }
+    
+    .editable-content:focus {
+        outline: none;
+        border-color: #80bdff;
+        background-color: #fff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    /* References Styling */
+    .references {
+        padding-left: 1.5rem;
+    }
+    
+    .references li {
+        margin-bottom: 0.5rem;
+        text-indent: -1.5rem;
+        padding-left: 1.5rem;
+    }
+    
+    /* Template Card Styling */
+    .border-dashed {
+        border-style: dashed;
+        border-width: 2px;
+        border-color: #dee2e6;
+    }
+</style>
+{% endblock %}

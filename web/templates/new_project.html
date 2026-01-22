@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Create New Project{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}">Projects</a></li>
+                <li class="breadcrumb-item active" aria-current="page">New Project</li>
+            </ol>
+        </nav>
+        <h1 class="display-5 fw-bold">Create New Project</h1>
+        <p class="lead">Start a new deep-sea eDNA research project and begin analyzing samples.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('new_project') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Project Title*</label>
+                        {{ form.title(class="form-control", placeholder="Enter a descriptive title for your project") }}
+                        {% if form.title.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.title.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Project Description*</label>
+                        {{ form.description(class="form-control", rows=4, placeholder="Describe the goals and scope of your project") }}
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.description.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.is_public(class="form-check-input") }}
+                        <label class="form-check-label" for="is_public">{{ form.is_public.label }}</label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Sampling Location</label>
+                        {{ form.location(class="form-control", placeholder="e.g., Mariana Trench, North Atlantic, etc.") }}
+                        {% if form.location.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.location.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="depth_min" class="form-label">Minimum Depth (m)</label>
+                            {{ form.depth_min(class="form-control", placeholder="e.g., 1000") }}
+                            {% if form.depth_min.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.depth_min.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="depth_max" class="form-label">Maximum Depth (m)</label>
+                            {{ form.depth_max(class="form-control", placeholder="e.g., 2500") }}
+                            {% if form.depth_max.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.depth_max.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tags" class="form-label">Tags</label>
+                        {{ form.tags(class="form-control", placeholder="e.g., hydrothermal vents, abyssal plain, cold seeps") }}
+                        <div class="form-text">Separate tags with commas</div>
+                        {% if form.tags.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.tags.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_public(class="form-check-input") }}
+                            <label class="form-check-label" for="is_public">
+                                Make this project public
+                            </label>
+                            <div class="form-text">Public projects can be viewed by all researchers using the platform</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="collaborators" class="form-label">Invite Collaborators</label>
+                        {{ form.collaborators(class="form-control", placeholder="Enter email addresses") }}
+                        <div class="form-text">Separate email addresses with commas</div>
+                        {% if form.collaborators.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.collaborators.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('projects') }}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Create Project</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Project Guidelines</h5>
+            </div>
+            <div class="card-body">
+                <p>Creating a well-structured project helps organize your deep-sea eDNA research effectively.</p>
+                <ul class="mb-0">
+                    <li>Use a clear, descriptive title</li>
+                    <li>Provide detailed project description</li>
+                    <li>Include precise sampling location information</li>
+                    <li>Add relevant tags for better searchability</li>
+                    <li>Consider making your project public to foster collaboration</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>What's Next?</h5>
+            </div>
+            <div class="card-body">
+                <p>After creating your project, you can:</p>
+                <ol class="mb-0">
+                    <li>Upload sample data files</li>
+                    <li>Run eDNA analysis pipelines</li>
+                    <li>Visualize taxonomic distributions</li>
+                    <li>Generate comprehensive reports</li>
+                    <li>Share findings with collaborators</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add any project creation specific JavaScript here
+</script>
+{% endblock %}

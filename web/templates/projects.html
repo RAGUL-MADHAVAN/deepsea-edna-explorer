@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - My Projects{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Projects</li>
+                </ol>
+            </nav>
+            <h1 class="display-5 fw-bold text-primary"><i class="fas fa-project-diagram me-2"></i>My Projects</h1>
+            <p class="lead">Manage your deep-sea eDNA research projects</p>
+            <div class="ocean-divider mb-3"></div>
+        </div>
+        <div>
+            <a href="{{ url_for('new_project') }}" class="btn ocean-button">
+                <i class="fas fa-plus me-2 pulse-icon"></i>New Project
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="ocean-card">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-filter me-2"></i>Filters and Search
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('projects') }}" class="row g-3">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-primary text-white"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" name="search" placeholder="Search projects..." value="{{ request.args.get('search', '') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="filter">
+                            <option value="all" {% if request.args.get('filter') == 'all' %}selected{% endif %}>All Projects</option>
+                            <option value="my" {% if request.args.get('filter') == 'my' %}selected{% endif %}>My Projects</option>
+                            <option value="shared" {% if request.args.get('filter') == 'shared' %}selected{% endif %}>Shared With Me</option>
+                            <option value="public" {% if request.args.get('filter') == 'public' %}selected{% endif %}>Public Projects</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="sort">
+                            <option value="updated_desc" {% if request.args.get('sort') == 'updated_desc' %}selected{% endif %}>Last Updated</option>
+                            <option value="created_desc" {% if request.args.get('sort') == 'created_desc' %}selected{% endif %}>Newest First</option>
+                            <option value="created_asc" {% if request.args.get('sort') == 'created_asc' %}selected{% endif %}>Oldest First</option>
+                            <option value="title_asc" {% if request.args.get('sort') == 'title_asc' %}selected{% endif %}>Title (A-Z)</option>
+                            <option value="samples_desc" {% if request.args.get('sort') == 'samples_desc' %}selected{% endif %}>Most Samples</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn ocean-button-sm w-100">Apply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Projects List -->
+<div class="row">
+    <div class="col-12">
+        {% if projects %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for project in projects %}
+            <div class="col">
+                <div class="ocean-card h-100 project-card">
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-decoration-none text-white">
+                                    <i class="fas fa-project-diagram me-2"></i>{{ project.title }}
+                                </a>
+                            </h5>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-link text-white" type="button" id="dropdownMenuButton{{ project.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ project.id }}">
+                                    <li><a class="dropdown-item" href="{{ url_for('project_detail', project_id=project.id) }}"><i class="fas fa-eye me-2"></i>View</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('edit_project', project_id=project.id) }}"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('upload_sample', project_id=project.id) }}"><i class="fas fa-upload me-2"></i>Upload Sample</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('manage_collaborators', project_id=project.id) }}"><i class="fas fa-users me-2"></i>Manage Collaborators</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteProjectModal{{ project.id }}">
+                                            <i class="fas fa-trash-alt me-2"></i>Delete
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text text-truncate mb-3">{{ project.description }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="ocean-badge bg-primary me-1">{{ project.samples|length }} samples</span>
+                                {% if project.is_public %}
+                                <span class="ocean-badge bg-success"><i class="fas fa-globe me-1"></i>Public</span>
+                                {% else %}
+                                <span class="ocean-badge bg-secondary"><i class="fas fa-lock me-1"></i>Private</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">Updated {{ project.updated_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        
+                        {% if project.location %}
+                        <div class="mb-2 small">
+                            <i class="fas fa-map-marker-alt me-1 text-primary"></i> {{ project.location }}
+                        </div>
+                        {% endif %}
+                        
+                        {% if project.depth_min and project.depth_max %}
+                        <div class="mb-2 small">
+                            <i class="fas fa-water me-1 text-primary"></i> {{ project.depth_min }} - {{ project.depth_max }} m
+                        </div>
+                        {% endif %}
+                        
+                        {% if project.tags %}
+                        <div class="mb-3">
+                            {% for tag in project.tags.split(',') %}
+                            <span class="ocean-badge bg-light text-dark me-1 mb-1">{{ tag.strip() }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn ocean-button-sm">
+                                <i class="fas fa-eye me-1 pulse-icon"></i>View Project
+                            </a>
+                        </div>
+                    </div>
+                    
+                    {% if project.collaborators %}
+                    <div class="card-footer bg-info text-white">
+                        <div class="d-flex align-items-center">
+                            <small class="me-2"><i class="fas fa-users me-1"></i>Collaborators:</small>
+                            <div class="avatar-container">
+                                {% for collaborator in project.collaborators[:3] %}
+                                <div class="avatar avatar-xs" data-bs-toggle="tooltip" title="{{ collaborator.user.name }}">
+                                    {% if collaborator.user.profile_image %}
+                                    <img src="{{ collaborator.user.profile_image }}" alt="{{ collaborator.user.name }}">
+                                    {% else %}
+                                    <div class="avatar-initials">{{ collaborator.user.name[:1] }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                                {% if project.collaborators|length > 3 %}
+                                <div class="avatar avatar-xs">
+                                    <div class="avatar-initials bg-light text-dark">+{{ project.collaborators|length - 3 }}</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Delete Project Modal -->
+                <div class="modal fade" id="deleteProjectModal{{ project.id }}" tabindex="-1" aria-labelledby="deleteProjectModalLabel{{ project.id }}" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title" id="deleteProjectModalLabel{{ project.id }}"><i class="fas fa-exclamation-triangle me-2"></i>Delete Project</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Are you sure you want to delete the project <strong>{{ project.title }}</strong>?</p>
+                                <p class="text-danger"><i class="fas fa-exclamation-circle me-2"></i>This action cannot be undone. All samples, analyses, and results associated with this project will be permanently deleted.</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
+                                <form action="{{ url_for('delete_project', project_id=project.id) }}" method="POST" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn ocean-button bg-danger"><i class="fas fa-trash-alt me-2"></i>Delete Project</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if pagination.pages > 1 %}
+        <nav aria-label="Project pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if pagination.has_prev %}
+                <li class="page-item">
+                    <a class="page-link bg-primary text-white" href="{{ url_for('projects', page=pagination.prev_num, **request.args) }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for page in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page %}
+                <li class="page-item {% if page == pagination.page %}active{% endif %}">
+                    <a class="page-link {% if page == pagination.page %}bg-primary{% endif %}" href="{{ url_for('projects', page=page, **request.args) }}">{{ page }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#">...</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                
+                {% if pagination.has_next %}
+                <li class="page-item">
+                    <a class="page-link bg-primary text-white" href="{{ url_for('projects', page=pagination.next_num, **request.args) }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-project-diagram fa-4x text-primary mb-3 pulse-icon"></i>
+            <h3 class="text-primary">No projects found</h3>
+            <p class="text-muted">You don't have any projects yet or none match your search criteria.</p>
+            <a href="{{ url_for('new_project') }}" class="btn ocean-button mt-3">
+                <i class="fas fa-plus me-2"></i>Create Your First Project
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Ocean Waves Animation -->
+<div class="ocean-waves mt-5">
+    <div class="wave"></div>
+    <div class="wave"></div>
+</div>
+
+<!-- Bubbles Animation -->
+<div class="bubbles">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+{% endblock %}

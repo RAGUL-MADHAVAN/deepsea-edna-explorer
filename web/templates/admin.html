@@ -1,0 +1,1231 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5 fw-bold">Admin Dashboard</h1>
+        <p class="lead">Manage users, projects, and system settings for DeepSea eDNA Explorer.</p>
+    </div>
+</div>
+
+<!-- Admin Stats Overview -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-4 mb-md-0">
+        <div class="card h-100 border-primary">
+            <div class="card-body text-center">
+                <div class="display-4 fw-bold text-primary mb-2">{{ stats.total_users }}</div>
+                <h5 class="card-title">Total Users</h5>
+                <p class="card-text text-muted small">{{ stats.new_users_this_month }} new this month</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4 mb-md-0">
+        <div class="card h-100 border-success">
+            <div class="card-body text-center">
+                <div class="display-4 fw-bold text-success mb-2">{{ stats.total_projects }}</div>
+                <h5 class="card-title">Total Projects</h5>
+                <p class="card-text text-muted small">{{ stats.new_projects_this_month }} new this month</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4 mb-md-0">
+        <div class="card h-100 border-info">
+            <div class="card-body text-center">
+                <div class="display-4 fw-bold text-info mb-2">{{ stats.total_samples }}</div>
+                <h5 class="card-title">Total Samples</h5>
+                <p class="card-text text-muted small">{{ stats.samples_processed_this_month }} processed this month</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-warning">
+            <div class="card-body text-center">
+                <div class="display-4 fw-bold text-warning mb-2">{{ stats.system_uptime }}%</div>
+                <h5 class="card-title">System Uptime</h5>
+                <p class="card-text text-muted small">Last 30 days</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Admin Navigation Sidebar -->
+    <div class="col-md-3 mb-4">
+        <div class="card sticky-top" style="top: 1rem; z-index: 100;">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Admin Controls</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="#user-management" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center active" data-bs-toggle="list">
+                    <span><i class="fas fa-users me-2"></i>User Management</span>
+                    <span class="badge bg-primary rounded-pill">{{ stats.total_users }}</span>
+                </a>
+                <a href="#project-management" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="list">
+                    <span><i class="fas fa-project-diagram me-2"></i>Project Management</span>
+                    <span class="badge bg-primary rounded-pill">{{ stats.total_projects }}</span>
+                </a>
+                <a href="#system-settings" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                    <i class="fas fa-cogs me-2"></i>System Settings
+                </a>
+                <a href="#database-management" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                    <i class="fas fa-database me-2"></i>Database Management
+                </a>
+                <a href="#analysis-pipeline" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                    <i class="fas fa-dna me-2"></i>Analysis Pipeline
+                </a>
+                <a href="#logs-monitoring" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                    <i class="fas fa-file-alt me-2"></i>Logs & Monitoring
+                </a>
+                <a href="#backup-restore" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                    <i class="fas fa-cloud-download-alt me-2"></i>Backup & Restore
+                </a>
+                <a href="#announcements" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                    <i class="fas fa-bullhorn me-2"></i>Announcements
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Admin Content Area -->
+    <div class="col-md-9">
+        <div class="tab-content">
+            <!-- User Management Tab -->
+            <div class="tab-pane fade show active" id="user-management">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">User Management</h5>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                                <i class="fas fa-user-plus me-1"></i>Add User
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2">
+                                <i class="fas fa-download me-1"></i>Export
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search users..." id="userSearchInput">
+                                    <button class="btn btn-outline-secondary" type="button">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-filter me-1"></i>Filter
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-sort me-1"></i>Sort
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#">Name (A-Z)</a></li>
+                                        <li><a class="dropdown-item" href="#">Name (Z-A)</a></li>
+                                        <li><a class="dropdown-item" href="#">Newest First</a></li>
+                                        <li><a class="dropdown-item" href="#">Oldest First</a></li>
+                                        <li><a class="dropdown-item" href="#">Most Projects</a></li>
+                                        <li><a class="dropdown-item" href="#">Most Active</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="selectAllUsers">
+                                                <label class="form-check-label" for="selectAllUsers"></label>
+                                            </div>
+                                        </th>
+                                        <th>User</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Projects</th>
+                                        <th>Last Active</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users %}
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="user{{ user.id }}">
+                                                <label class="form-check-label" for="user{{ user.id }}"></label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="{{ user.profile_picture }}" class="rounded-circle me-2" width="40" height="40" alt="{{ user.full_name }}">
+                                                <div>
+                                                    <div class="fw-bold">{{ user.full_name }}</div>
+                                                    <div class="small text-muted">@{{ user.username }}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ user.email }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ user.role_color }}">{{ user.role }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ user.status_color }}">{{ user.status }}</span>
+                                        </td>
+                                        <td>{{ user.projects_count }}</td>
+                                        <td>{{ user.last_active|datetimeformat }}</td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    Actions
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#viewUserModal{{ user.id }}"><i class="fas fa-eye me-2"></i>View Details</a></li>
+                                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editUserModal{{ user.id }}"><i class="fas fa-edit me-2"></i>Edit User</a></li>
+                                                    <li><a class="dropdown-item" href="#"><i class="fas fa-key me-2"></i>Reset Password</a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    {% if user.status == 'Active' %}
+                                                    <li><a class="dropdown-item text-warning" href="#"><i class="fas fa-ban me-2"></i>Suspend User</a></li>
+                                                    {% else %}
+                                                    <li><a class="dropdown-item text-success" href="#"><i class="fas fa-check-circle me-2"></i>Activate User</a></li>
+                                                    {% endif %}
+                                                    <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.id }}"><i class="fas fa-trash-alt me-2"></i>Delete User</a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <nav aria-label="User pagination" class="mt-3">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                                </li>
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">User Activity</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container" style="position: relative; height:300px;">
+                            <canvas id="userActivityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">User Roles & Permissions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Permission</th>
+                                        <th>Admin</th>
+                                        <th>Manager</th>
+                                        <th>Researcher</th>
+                                        <th>Viewer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>User Management</td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Project Management</td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                    </tr>
+                                    <tr>
+                                        <td>System Settings</td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Database Management</td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Run Analysis</td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                    </tr>
+                                    <tr>
+                                        <td>View Results</td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Generate Reports</td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Access Logs</td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                        <td class="text-center"><i class="fas fa-times text-danger"></i></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editRolesModal">
+                                <i class="fas fa-edit me-1"></i>Edit Roles & Permissions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Project Management Tab -->
+            <div class="tab-pane fade" id="project-management">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Project Management</h5>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                                <i class="fas fa-plus me-1"></i>Add Project
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2">
+                                <i class="fas fa-download me-1"></i>Export
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search projects..." id="projectSearchInput">
+                                    <button class="btn btn-outline-secondary" type="button">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-filter me-1"></i>Filter
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-sort me-1"></i>Sort
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#">Title (A-Z)</a></li>
+                                        <li><a class="dropdown-item" href="#">Title (Z-A)</a></li>
+                                        <li><a class="dropdown-item" href="#">Newest First</a></li>
+                                        <li><a class="dropdown-item" href="#">Oldest First</a></li>
+                                        <li><a class="dropdown-item" href="#">Most Samples</a></li>
+                                        <li><a class="dropdown-item" href="#">Most Active</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="selectAllProjects">
+                                                <label class="form-check-label" for="selectAllProjects"></label>
+                                            </div>
+                                        </th>
+                                        <th>Project</th>
+                                        <th>Owner</th>
+                                        <th>Status</th>
+                                        <th>Visibility</th>
+                                        <th>Samples</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for project in projects %}
+                                    <tr>
+                                        <td>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="project{{ project.id }}">
+                                                <label class="form-check-label" for="project{{ project.id }}"></label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <div class="fw-bold">{{ project.title }}</div>
+                                                <div class="small text-muted">{{ project.location }}</div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <img src="{{ project.owner.profile_picture }}" class="rounded-circle me-2" width="30" height="30" alt="{{ project.owner.full_name }}">
+                                                <span>{{ project.owner.full_name }}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ project.status_color }}">{{ project.status }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ project.visibility_color }}">{{ project.visibility }}</span>
+                                        </td>
+                                        <td>{{ project.samples_count }}</td>
+                                        <td>{{ project.created_at|datetimeformat }}</td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    Actions
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li><a class="dropdown-item" href="{{ url_for('project_detail', project_id=project.id) }}"><i class="fas fa-eye me-2"></i>View Project</a></li>
+                                                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editProjectModal{{ project.id }}"><i class="fas fa-edit me-2"></i>Edit Project</a></li>
+                                                    <li><a class="dropdown-item" href="#"><i class="fas fa-user-friends me-2"></i>Manage Collaborators</a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    {% if project.status == 'Active' %}
+                                                    <li><a class="dropdown-item text-warning" href="#"><i class="fas fa-pause-circle me-2"></i>Archive Project</a></li>
+                                                    {% else %}
+                                                    <li><a class="dropdown-item text-success" href="#"><i class="fas fa-play-circle me-2"></i>Activate Project</a></li>
+                                                    {% endif %}
+                                                    <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteProjectModal{{ project.id }}"><i class="fas fa-trash-alt me-2"></i>Delete Project</a></li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <nav aria-label="Project pagination" class="mt-3">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                                </li>
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Project Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height:300px;">
+                                    <canvas id="projectStatusChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height:300px;">
+                                    <canvas id="projectCreationChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Settings Tab -->
+            <div class="tab-pane fade" id="system-settings">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">System Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="systemSettingsForm">
+                            <!-- General Settings -->
+                            <h5 class="border-bottom pb-2 mb-3">General Settings</h5>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Abundance Filtering</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enableAbundanceFiltering" checked>
+                                            <label class="form-check-label" for="enableAbundanceFiltering">Filter low-abundance sequences</label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="abundanceThreshold" class="form-label">Abundance Threshold (%)</label>
+                                        <input type="number" class="form-control" id="abundanceThreshold" value="0.1" step="0.01" min="0" max="100">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary me-2">Reset to Defaults</button>
+                                <button type="submit" class="btn btn-primary">Save Configuration</button>
+                            </div>
+                        </form>
+                        
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">Reference Databases</h5>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Database</th>
+                                        <th>Version</th>
+                                        <th>Type</th>
+                                        <th>Size</th>
+                                        <th>Last Updated</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for db in reference_databases %}
+                                    <tr>
+                                        <td>{{ db.name }}</td>
+                                        <td>{{ db.version }}</td>
+                                        <td>{{ db.type }}</td>
+                                        <td>{{ db.size }}</td>
+                                        <td>{{ db.updated_at|datetimeformat }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ db.status_color }}">{{ db.status }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-sync-alt me-1"></i>Update
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-trash-alt me-1"></i>Remove
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-end mb-4">
+                            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addDatabaseModal">
+                                <i class="fas fa-plus me-1"></i>Add Reference Database
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Logs & Monitoring Tab -->
+            <div class="tab-pane fade" id="logs-monitoring">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">System Logs</h5>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-download me-1"></i>Export Logs
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <select class="form-select" id="logType">
+                                    <option value="all" selected>All Logs</option>
+                                    <option value="error">Error Logs</option>
+                                    <option value="warning">Warning Logs</option>
+                                    <option value="info">Info Logs</option>
+                                    <option value="debug">Debug Logs</option>
+                                    <option value="access">Access Logs</option>
+                                    <option value="auth">Authentication Logs</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="date" class="form-control" id="logDate">
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Search logs..." id="logSearchInput">
+                                    <button class="btn btn-outline-secondary" type="button">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive mt-3">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Level</th>
+                                        <th>Source</th>
+                                        <th>User</th>
+                                        <th>Message</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in system_logs %}
+                                    <tr class="{% if log.level == 'ERROR' %}table-danger{% elif log.level == 'WARNING' %}table-warning{% elif log.level == 'INFO' %}table-info{% endif %}">
+                                        <td class="small">{{ log.timestamp|datetimeformat }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ log.level_color }}">{{ log.level }}</span>
+                                        </td>
+                                        <td class="small">{{ log.source }}</td>
+                                        <td class="small">{{ log.user }}</td>
+                                        <td>{{ log.message }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#viewLogModal{{ log.id }}">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <nav aria-label="Log pagination" class="mt-3">
+                            <ul class="pagination justify-content-center">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                                </li>
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">System Monitoring</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height:250px;">
+                                    <canvas id="cpuUsageChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height:250px;">
+                                    <canvas id="memoryUsageChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height:250px;">
+                                    <canvas id="diskUsageChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height:250px;">
+                                    <canvas id="networkTrafficChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- System Settings Tab -->
+            <div class="tab-pane fade" id="system-settings">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">System Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="systemSettingsForm">
+                            <!-- General Settings -->
+                            <h5 class="border-bottom pb-2 mb-3">General Settings</h5>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="siteName" class="form-label">Site Name</label>
+                                        <input type="text" class="form-control" id="siteName" value="DeepSea eDNA Explorer">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="siteDescription" class="form-label">Site Description</label>
+                                        <textarea class="form-control" id="siteDescription" rows="2">A platform for deep-sea environmental DNA analysis and exploration.</textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="contactEmail" class="form-label">Contact Email</label>
+                                        <input type="email" class="form-control" id="contactEmail" value="contact@deepseaedna.org">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="defaultLanguage" class="form-label">Default Language</label>
+                                        <select class="form-select" id="defaultLanguage">
+                                            <option value="en" selected>English</option>
+                                            <option value="es">Spanish</option>
+                                            <option value="fr">French</option>
+                                            <option value="de">German</option>
+                                            <option value="zh">Chinese</option>
+                                            <option value="ja">Japanese</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="dateFormat" class="form-label">Date Format</label>
+                                        <select class="form-select" id="dateFormat">
+                                            <option value="MM/DD/YYYY" selected>MM/DD/YYYY</option>
+                                            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                                            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="timeZone" class="form-label">Time Zone</label>
+                                        <select class="form-select" id="timeZone">
+                                            <option value="UTC" selected>UTC</option>
+                                            <option value="America/New_York">Eastern Time (ET)</option>
+                                            <option value="America/Chicago">Central Time (CT)</option>
+                                            <option value="America/Denver">Mountain Time (MT)</option>
+                                            <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                                            <option value="Europe/London">London</option>
+                                            <option value="Europe/Paris">Paris</option>
+                                            <option value="Asia/Tokyo">Tokyo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Security Settings -->
+                            <h5 class="border-bottom pb-2 mb-3">Security Settings</h5>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="sessionTimeout" class="form-label">Session Timeout (minutes)</label>
+                                        <input type="number" class="form-control" id="sessionTimeout" value="60">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="maxLoginAttempts" class="form-label">Max Login Attempts</label>
+                                        <input type="number" class="form-control" id="maxLoginAttempts" value="5">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="passwordPolicy" class="form-label">Password Policy</label>
+                                        <select class="form-select" id="passwordPolicy">
+                                            <option value="basic">Basic (8+ characters)</option>
+                                            <option value="standard" selected>Standard (8+ chars, 1 uppercase, 1 number)</option>
+                                            <option value="strong">Strong (10+ chars, uppercase, number, special)</option>
+                                            <option value="custom">Custom</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Two-Factor Authentication</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enable2FA" checked>
+                                            <label class="form-check-label" for="enable2FA">Enable for all users</label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">API Access</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enableAPI" checked>
+                                            <label class="form-check-label" for="enableAPI">Enable API access</label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">HTTPS Enforcement</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enforceHTTPS" checked>
+                                            <label class="form-check-label" for="enforceHTTPS">Enforce HTTPS connections</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Email Settings -->
+                            <h5 class="border-bottom pb-2 mb-3">Email Settings</h5>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="smtpServer" class="form-label">SMTP Server</label>
+                                        <input type="text" class="form-control" id="smtpServer" value="smtp.example.com">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="smtpPort" class="form-label">SMTP Port</label>
+                                        <input type="number" class="form-control" id="smtpPort" value="587">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="smtpUsername" class="form-label">SMTP Username</label>
+                                        <input type="text" class="form-control" id="smtpUsername" value="notifications@deepseaedna.org">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="smtpPassword" class="form-label">SMTP Password</label>
+                                        <input type="password" class="form-control" id="smtpPassword" value="********">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="emailFromName" class="form-label">From Name</label>
+                                        <input type="text" class="form-control" id="emailFromName" value="DeepSea eDNA Explorer">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="emailFromAddress" class="form-label">From Address</label>
+                                        <input type="email" class="form-control" id="emailFromAddress" value="notifications@deepseaedna.org">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Email Encryption</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="emailEncryption" id="emailEncryptionNone" value="none">
+                                            <label class="form-check-label" for="emailEncryptionNone">None</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="emailEncryption" id="emailEncryptionTLS" value="tls" checked>
+                                            <label class="form-check-label" for="emailEncryptionTLS">TLS</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="emailEncryption" id="emailEncryptionSSL" value="ssl">
+                                            <label class="form-check-label" for="emailEncryptionSSL">SSL</label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <button type="button" class="btn btn-outline-primary">
+                                            <i class="fas fa-paper-plane me-1"></i>Send Test Email
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- File Storage Settings -->
+                            <h5 class="border-bottom pb-2 mb-3">File Storage Settings</h5>
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="storageProvider" class="form-label">Storage Provider</label>
+                                        <select class="form-select" id="storageProvider">
+                                            <option value="local" selected>Local Storage</option>
+                                            <option value="s3">Amazon S3</option>
+                                            <option value="gcs">Google Cloud Storage</option>
+                                            <option value="azure">Azure Blob Storage</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="maxFileSize" class="form-label">Max File Size (MB)</label>
+                                        <input type="number" class="form-control" id="maxFileSize" value="500">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="allowedFileTypes" class="form-label">Allowed File Types</label>
+                                        <input type="text" class="form-control" id="allowedFileTypes" value=".fastq,.fasta,.fastq.gz,.fasta.gz,.csv,.txt,.xlsx">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="dataRetentionPeriod" class="form-label">Data Retention Period (days)</label>
+                                        <input type="number" class="form-control" id="dataRetentionPeriod" value="365">
+                                        <div class="form-text">0 = keep forever</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Auto-delete Temporary Files</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="autoDeleteTempFiles" checked>
+                                            <label class="form-check-label" for="autoDeleteTempFiles">Delete temporary files after 7 days</label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Storage Usage</label>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-primary" role="progressbar" style="width: 65%" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100">65%</div>
+                                        </div>
+                                        <div class="small text-muted">650 GB used of 1 TB total</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary me-2">Reset to Defaults</button>
+                                <button type="submit" class="btn btn-primary">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Database Management Tab -->
+            <div class="tab-pane fade" id="database-management">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Database Management</h5>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-primary">
+                                <i class="fas fa-database me-1"></i>Backup Now
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>Database management operations should be performed with caution. Consider creating a backup before making changes.
+                        </div>
+                        
+                        <h5 class="border-bottom pb-2 mb-3">Database Information</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <table class="table table-bordered">
+                                    <tbody>
+                                        <tr>
+                                            <th scope="row">Database Type</th>
+                                            <td>PostgreSQL</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Version</th>
+                                            <td>13.4</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Size</th>
+                                            <td>2.3 GB</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Tables</th>
+                                            <td>42</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Last Backup</th>
+                                            <td>2023-06-15 03:00:00 UTC</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height:250px;">
+                                    <canvas id="databaseGrowthChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="border-bottom pb-2 mb-3">Backup Schedule</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="backupFrequency" class="form-label">Backup Frequency</label>
+                                    <select class="form-select" id="backupFrequency">
+                                        <option value="hourly">Hourly</option>
+                                        <option value="daily" selected>Daily</option>
+                                        <option value="weekly">Weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="backupTime" class="form-label">Backup Time</label>
+                                    <input type="time" class="form-control" id="backupTime" value="03:00">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="retentionPeriod" class="form-label">Retention Period (days)</label>
+                                    <input type="number" class="form-control" id="retentionPeriod" value="30">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="backupLocation" class="form-label">Backup Location</label>
+                                    <select class="form-select" id="backupLocation">
+                                        <option value="local" selected>Local Storage</option>
+                                        <option value="s3">Amazon S3</option>
+                                        <option value="gcs">Google Cloud Storage</option>
+                                        <option value="azure">Azure Blob Storage</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Compression</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="compressBackups" checked>
+                                        <label class="form-check-label" for="compressBackups">Compress backups</label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Encryption</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="encryptBackups" checked>
+                                        <label class="form-check-label" for="encryptBackups">Encrypt backups</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="border-bottom pb-2 mb-3">Recent Backups</h5>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Backup ID</th>
+                                        <th>Date & Time</th>
+                                        <th>Size</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for backup in backups %}
+                                    <tr>
+                                        <td>{{ backup.id }}</td>
+                                        <td>{{ backup.created_at|datetimeformat }}</td>
+                                        <td>{{ backup.size }}</td>
+                                        <td>{{ backup.type }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ backup.status_color }}">{{ backup.status }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-download me-1"></i>Download
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-success">
+                                                    <i class="fas fa-undo me-1"></i>Restore
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-trash-alt me-1"></i>Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <h5 class="border-bottom pb-2 mb-3">Database Maintenance</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Optimize Database</h6>
+                                        <p class="card-text">Run optimization routines to improve database performance.</p>
+                                        <button type="button" class="btn btn-primary">
+                                            <i class="fas fa-bolt me-1"></i>Optimize Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Repair Database</h6>
+                                        <p class="card-text">Check and repair database inconsistencies or corruption.</p>
+                                        <button type="button" class="btn btn-warning">
+                                            <i class="fas fa-wrench me-1"></i>Repair Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Clear Cache</h6>
+                                        <p class="card-text">Clear database query cache to free up memory.</p>
+                                        <button type="button" class="btn btn-info">
+                                            <i class="fas fa-broom me-1"></i>Clear Cache
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Reset Database</h6>
+                                        <p class="card-text text-danger">Warning: This will delete all data and reset the database to its initial state.</p>
+                                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#resetDatabaseModal">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>Reset Database
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analysis Pipeline Tab -->
+            <div class="tab-pane fade" id="analysis-pipeline">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Analysis Pipeline Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>Configure the eDNA analysis pipeline settings and parameters. Changes will affect all new analyses.
+                        </div>
+                        
+                        <h5 class="border-bottom pb-2 mb-3">Pipeline Status</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <table class="table table-bordered">
+                                    <tbody>
+                                        <tr>
+                                            <th scope="row">Pipeline Status</th>
+                                            <td><span class="badge bg-success">Running</span></td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Worker Nodes</th>
+                                            <td>4 / 4 active</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Queue Size</th>
+                                            <td>3 jobs waiting</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Processing Speed</th>
+                                            <td>~12 samples/hour</td>
+                                        </tr>
+                                        <tr>
+                                            <th scope="row">Last Updated</th>
+                                            <td>2023-06-15 14:32:45 UTC</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div class="btn-group mt-2">
+                                    <button type="button" class="btn btn-warning">
+                                        <i class="fas fa-pause me-1"></i>Pause Pipeline
+                                    </button>
+                                    <button type="button" class="btn btn-danger">
+                                        <i class="fas fa-stop me-1"></i>Stop Pipeline
+                                    </button>
+                                    <button type="button" class="btn btn-primary">
+                                        <i class="fas fa-sync-alt me-1"></i>Restart Pipeline
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container" style="position: relative; height:250px;">
+                                    <canvas id="pipelinePerformanceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="border-bottom pb-2 mb-3">Pipeline Configuration</h5>
+                        <form id="pipelineConfigForm">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h6>Preprocessing</h6>
+                                    <div class="mb-3">
+                                        <label for="qualityThreshold" class="form-label">Quality Threshold (Phred score)</label>
+                                        <input type="number" class="form-control" id="qualityThreshold" value="30">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="minReadLength" class="form-label">Minimum Read Length (bp)</label>
+                                        <input type="number" class="form-control" id="minReadLength" value="100">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="maxReadLength" class="form-label">Maximum Read Length (bp)</label>
+                                        <input type="number" class="form-control" id="maxReadLength" value="300">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="adapterSequences" class="form-label">Adapter Sequences</label>
+                                        <textarea class="form-control" id="adapterSequences" rows="2">AGATCGGAAGAGC,GCTCTTCCGATCT</textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Classification</h6>
+                                    <div class="mb-3">
+                                        <label for="defaultClassifier" class="form-label">Default Classifier</label>
+                                        <select class="form-select" id="defaultClassifier">
+                                            <option value="blast">BLAST</option>
+                                            <option value="vsearch" selected>VSEARCH</option>
+                                            <option value="kraken2">Kraken2</option>
+                                            <option value="qiime2">QIIME2</option>
+                                            <option value="custom">Custom</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="confidenceThreshold" class="form-label">Confidence Threshold</label>
+                                        <input type="number" class="form-control" id="confidenceThreshold" value="0.8" step="0.01" min="0" max="1">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="defaultDatabase" class="form-label">Default Reference Database</label>
+                                        <select class="form-select" id="defaultDatabase">
+                                            <option value="silva">SILVA</option>
+                                            <option value="greengenes">GreenGenes</option>
+                                            <option value="unite">UNITE</option>
+                                            <option value="midori" selected>MIDORI</option>
+                                            <option value="custom">Custom</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="taxonomyLevels" class="form-label">Taxonomy Levels</label>
+                                        <input type="text" class="form-control" id="taxonomyLevels" value="Kingdom,Phylum,Class,Order,Family,Genus,Species">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h6>Computational Resources</h6>
+                                    <div class="mb-3">
+                                        <label for="maxWorkers" class="form-label">Maximum Worker Nodes</label>
+                                        <input type="number" class="form-control" id="maxWorkers" value="4">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="maxMemoryPerJob" class="form-label">Maximum Memory per Job (GB)</label>
+                                        <input type="number" class="form-control" id="maxMemoryPerJob" value="16">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="maxCPUsPerJob" class="form-label">Maximum CPUs per Job</label>
+                                        <input type="number" class="form-control" id="maxCPUsPerJob" value="4">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="jobTimeout" class="form-label">Job Timeout (minutes)</label>
+                                        <input type="number" class="form-control" id="jobTimeout" value="120">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Advanced Settings</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label">Chimera Detection</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enableChimeraDetection" checked>
+                                            <label class="form-check-label" for="enableChimeraDetection">Enable chimera detection</label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Dereplication</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="enableDereplication" checked>
+                                            <label class="form-check-label" for="enableDereplication">Enable sequence dereplication</label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3"

@@ -1,0 +1,202 @@
+/* Ocean-themed Profile Styles */
+
+/* Profile Header */
+.profile-header {
+    position: relative;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    color: #fff;
+}
+
+.profile-header-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, var(--ocean-deep) 0%, var(--ocean-medium) 100%);
+    opacity: 0.9;
+    z-index: -1;
+}
+
+/* Profile Avatar */
+.profile-avatar-container {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    margin-top: -60px;
+}
+
+.profile-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid #fff;
+    background-color: #f0f8ff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 2;
+    position: relative;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.default-profile-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--ocean-medium);
+    background-color: #f0f8ff;
+}
+
+.avatar-upload {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    z-index: 3;
+}
+
+.avatar-upload .btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Profile Navigation */
+.profile-nav .nav-link {
+    color: var(--ocean-dark);
+    border-left: 3px solid transparent;
+    border-radius: 0;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.profile-nav .nav-link:hover {
+    background-color: rgba(var(--ocean-light-rgb), 0.1);
+    border-left-color: var(--ocean-medium);
+}
+
+.profile-nav .nav-link.active {
+    color: var(--ocean-deep);
+    background-color: rgba(var(--ocean-light-rgb), 0.2);
+    border-left-color: var(--ocean-deep);
+    font-weight: 500;
+}
+
+/* Timeline for Education and Experience */
+.timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 0;
+    height: 100%;
+    width: 2px;
+    background: var(--ocean-light);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -2rem;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 4px rgba(var(--ocean-medium-rgb), 0.2);
+}
+
+.timeline-content {
+    padding: 1rem;
+    background-color: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Publication Items */
+.publication-item {
+    position: relative;
+}
+
+.toggle-abstract {
+    color: var(--ocean-medium);
+    text-decoration: none;
+}
+
+.toggle-abstract:hover {
+    color: var(--ocean-deep);
+}
+
+/* Badge Icons */
+.badge-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: rgba(var(--ocean-light-rgb), 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    color: var(--ocean-deep);
+    transition: all 0.3s ease;
+}
+
+.badge-icon:hover {
+    transform: scale(1.1);
+    background-color: rgba(var(--ocean-light-rgb), 0.4);
+}
+
+/* Ocean Waves Animation for Profile */
+.ocean-waves {
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    z-index: 1;
+    overflow: hidden;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .profile-header .row {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .profile-avatar-container {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+    }
+    
+    .profile-stats {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .col-md-3.text-end {
+        text-align: center !important;
+        margin-top: 1.5rem;
+    }
+}

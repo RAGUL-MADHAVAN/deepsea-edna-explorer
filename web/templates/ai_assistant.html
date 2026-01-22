@@ -1,0 +1,671 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - AI Research Assistant{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-robot me-1"></i>AI Research Assistant</li>
+            </ol>
+        </nav>
+        <h1 class="display-5 fw-bold text-primary"><i class="fas fa-robot me-2"></i>AI Research Assistant</h1>
+        <p class="lead">Your intelligent companion for deep-sea eDNA research</p>
+        <div class="ocean-divider mb-3"></div>
+    </div>
+</div>
+
+<!-- AI Assistant Interface -->
+<div class="row">
+    <!-- Left Panel: Chat Interface -->
+    <div class="col-lg-8">
+        <div class="ocean-card mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-comments me-2"></i>Research Conversation</h5>
+                    <div>
+                        <button class="btn btn-sm btn-light" id="clearChat" title="Clear conversation">
+                            <i class="fas fa-eraser"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light ms-2" id="saveChat" title="Save conversation">
+                            <i class="fas fa-save"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chat-container" id="chatContainer">
+                    <!-- Welcome Message -->
+                    <div class="message assistant-message">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-text">
+                                <p>Hello! I'm your DeepSea AI Research Assistant. I can help you with:</p>
+                                <ul>
+                                    <li>Analyzing your eDNA data and results</li>
+                                    <li>Providing insights on marine species identification</li>
+                                    <li>Suggesting relevant research papers and methodologies</li>
+                                    <li>Explaining complex biological concepts</li>
+                                    <li>Helping with data visualization and interpretation</li>
+                                </ul>
+                                <p>How can I assist with your deep-sea research today?</p>
+                            </div>
+                            <div class="message-time">{{ now.strftime('%H:%M') }}</div>
+                        </div>
+                    </div>
+                    <!-- Dynamic chat messages will be inserted here -->
+                </div>
+            </div>
+            <div class="card-footer">
+                <form id="chatForm" class="d-flex">
+                    <div class="input-group">
+                        <span class="input-group-text bg-primary text-white"><i class="fas fa-keyboard"></i></span>
+                        <input type="text" class="form-control ocean-input" id="userMessage" placeholder="Ask me anything about your deep-sea research..." required>
+                        <button type="submit" class="btn ocean-button">
+                            <i class="fas fa-paper-plane me-2"></i>Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Panel: Context and Tools -->
+    <div class="col-lg-4">
+        <!-- Current Context -->
+        <div class="ocean-card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Current Context</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label"><i class="fas fa-microscope me-2 text-primary"></i>Active Project</label>
+                    <select class="form-select ocean-input" id="contextProject">
+                        <option value="">Select a project...</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}">{{ project.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="fas fa-vial me-2 text-primary"></i>Active Sample</label>
+                    <select class="form-select ocean-input" id="contextSample" disabled>
+                        <option value="">Select a sample...</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="fas fa-chart-bar me-2 text-primary"></i>Active Analysis</label>
+                    <select class="form-select ocean-input" id="contextAnalysis" disabled>
+                        <option value="">Select an analysis...</option>
+                    </select>
+                </div>
+                <button class="btn ocean-button-sm w-100" id="setContext">
+                    <i class="fas fa-link me-2"></i>Set Context
+                </button>
+            </div>
+        </div>
+        
+        <!-- AI Tools -->
+        <div class="ocean-card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Research Tools</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <button class="list-group-item list-group-item-action d-flex align-items-center" id="toolSpeciesIdentification">
+                        <i class="fas fa-fish text-primary me-3"></i>
+                        <div>
+                            <strong>Species Identification</strong>
+                            <small class="d-block text-muted">Identify species from your results</small>
+                        </div>
+                    </button>
+                    <button class="list-group-item list-group-item-action d-flex align-items-center" id="toolLiteratureSearch">
+                        <i class="fas fa-book text-primary me-3"></i>
+                        <div>
+                            <strong>Literature Search</strong>
+                            <small class="d-block text-muted">Find relevant research papers</small>
+                        </div>
+                    </button>
+                    <button class="list-group-item list-group-item-action d-flex align-items-center" id="toolDataAnalysis">
+                        <i class="fas fa-chart-line text-primary me-3"></i>
+                        <div>
+                            <strong>Data Analysis</strong>
+                            <small class="d-block text-muted">Get insights from your data</small>
+                        </div>
+                    </button>
+                    <button class="list-group-item list-group-item-action d-flex align-items-center" id="toolMethodSuggestion">
+                        <i class="fas fa-flask text-primary me-3"></i>
+                        <div>
+                            <strong>Method Suggestions</strong>
+                            <small class="d-block text-muted">Improve your research methods</small>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI Settings -->
+        <div class="ocean-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Assistant Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Expertise Level</label>
+                    <select class="form-select ocean-input" id="aiExpertiseLevel">
+                        <option value="beginner">Beginner - Simplified explanations</option>
+                        <option value="intermediate" selected>Intermediate - Balanced detail</option>
+                        <option value="expert">Expert - Technical depth</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Response Length</label>
+                    <select class="form-select ocean-input" id="aiResponseLength">
+                        <option value="concise">Concise</option>
+                        <option value="balanced" selected>Balanced</option>
+                        <option value="detailed">Detailed</option>
+                    </select>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="aiCitationToggle" checked>
+                    <label class="form-check-label" for="aiCitationToggle">Include citations</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="aiDataAccessToggle" checked>
+                    <label class="form-check-label" for="aiDataAccessToggle">Allow access to my project data</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Save Conversation Modal -->
+<div class="modal fade" id="saveChatModal" tabindex="-1" aria-labelledby="saveChatModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="saveChatModalLabel"><i class="fas fa-save me-2"></i>Save Conversation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="chatTitle" class="form-label">Conversation Title</label>
+                    <input type="text" class="form-control ocean-input" id="chatTitle" placeholder="Enter a title for this conversation">
+                </div>
+                <div class="mb-3">
+                    <label for="chatProject" class="form-label">Associate with Project (Optional)</label>
+                    <select class="form-select ocean-input" id="chatProject">
+                        <option value="">None</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}">{{ project.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="chatShareable">
+                    <label class="form-check-label" for="chatShareable">
+                        Make conversation shareable with collaborators
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn ocean-button" id="saveChatConfirm">
+                    <i class="fas fa-save me-2"></i>Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clear Conversation Confirmation Modal -->
+<div class="modal fade" id="clearChatModal" tabindex="-1" aria-labelledby="clearChatModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="clearChatModalLabel"><i class="fas fa-exclamation-triangle me-2"></i>Clear Conversation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to clear the current conversation? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="clearChatConfirm">
+                    <i class="fas fa-eraser me-2"></i>Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ocean Waves Animation -->
+<div class="ocean-waves mt-5">
+    <div class="wave"></div>
+    <div class="wave"></div>
+</div>
+
+<!-- Bubbles Animation -->
+<div class="bubbles">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+        
+        // Chat functionality
+        const chatForm = document.getElementById('chatForm');
+        const userMessage = document.getElementById('userMessage');
+        const chatContainer = document.getElementById('chatContainer');
+        
+        // Sample AI responses for demo purposes
+        const sampleResponses = [
+            "Based on your eDNA data, I've identified several species of interest including <em>Bathynomus giganteus</em> (Giant Isopod) and <em>Vampyroteuthis infernalis</em> (Vampire Squid). These findings suggest a diverse benthic community at your sampling location.",
+            "Your abundance analysis shows a significant correlation between depth and species diversity (p < 0.01). This pattern is consistent with recent findings by Johnson et al. (2023) on bathymetric biodiversity gradients.",
+            "I've analyzed your sample against the reference database. The dominant phyla are Chordata (42%), Arthropoda (28%), and Cnidaria (15%). This composition is typical for a mid-Atlantic hydrothermal vent ecosystem.",
+            "Looking at your temporal data, there appears to be seasonal variation in the detection of several key indicator species. I recommend collecting additional samples during the spring transition period to capture the full biodiversity cycle."
+        ];
+        
+        // Handle chat form submission
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const message = userMessage.value.trim();
+            if (message === '') return;
+            
+            // Add user message to chat
+            addMessage('user', message);
+            userMessage.value = '';
+            
+            // Simulate AI thinking
+            setTimeout(() => {
+                // Show typing indicator
+                const typingIndicator = document.createElement('div');
+                typingIndicator.className = 'message assistant-message typing-indicator';
+                typingIndicator.innerHTML = `
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="message-text">
+                            <div class="typing-dots">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatContainer.appendChild(typingIndicator);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                
+                // Simulate AI response after a delay
+                setTimeout(() => {
+                    // Remove typing indicator
+                    chatContainer.removeChild(typingIndicator);
+                    
+                    // Add AI response
+                    const randomResponse = sampleResponses[Math.floor(Math.random() * sampleResponses.length)];
+                    addMessage('assistant', randomResponse);
+                }, 1500);
+            }, 500);
+        });
+        
+        // Function to add a message to the chat
+        function addMessage(sender, text) {
+            const now = new Date();
+            const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                              now.getMinutes().toString().padStart(2, '0');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            let avatarIcon = sender === 'user' ? 'fa-user' : 'fa-robot';
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas ${avatarIcon}"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-text">
+                        <p>${text}</p>
+                    </div>
+                    <div class="message-time">${timeString}</div>
+                </div>
+            `;
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Context selection logic
+        const contextProject = document.getElementById('contextProject');
+        const contextSample = document.getElementById('contextSample');
+        const contextAnalysis = document.getElementById('contextAnalysis');
+        
+        contextProject.addEventListener('change', function() {
+            if (this.value) {
+                // Simulate loading samples for the selected project
+                contextSample.disabled = false;
+                contextSample.innerHTML = '<option value="">Select a sample...</option>';
+                
+                // Add dummy sample options
+                const sampleNames = ['Deep Trench Sample A', 'Hydrothermal Vent B', 'Abyssal Plain C', 'Seamount Ridge D'];
+                sampleNames.forEach((name, index) => {
+                    const option = document.createElement('option');
+                    option.value = index + 1;
+                    option.textContent = name;
+                    contextSample.appendChild(option);
+                });
+            } else {
+                contextSample.disabled = true;
+                contextSample.innerHTML = '<option value="">Select a sample...</option>';
+                contextAnalysis.disabled = true;
+                contextAnalysis.innerHTML = '<option value="">Select an analysis...</option>';
+            }
+        });
+        
+        contextSample.addEventListener('change', function() {
+            if (this.value) {
+                // Simulate loading analyses for the selected sample
+                contextAnalysis.disabled = false;
+                contextAnalysis.innerHTML = '<option value="">Select an analysis...</option>';
+                
+                // Add dummy analysis options
+                const analysisNames = ['Taxonomic Classification', 'Abundance Estimation', 'Diversity Analysis', 'Temporal Comparison'];
+                analysisNames.forEach((name, index) => {
+                    const option = document.createElement('option');
+                    option.value = index + 1;
+                    option.textContent = name;
+                    contextAnalysis.appendChild(option);
+                });
+            } else {
+                contextAnalysis.disabled = true;
+                contextAnalysis.innerHTML = '<option value="">Select an analysis...</option>';
+            }
+        });
+        
+        // Set context button
+        document.getElementById('setContext').addEventListener('click', function() {
+            const projectValue = contextProject.value;
+            const projectText = projectValue ? contextProject.options[contextProject.selectedIndex].text : 'None';
+            
+            const sampleValue = contextSample.value;
+            const sampleText = sampleValue ? contextSample.options[contextSample.selectedIndex].text : 'None';
+            
+            const analysisValue = contextAnalysis.value;
+            const analysisText = analysisValue ? contextAnalysis.options[contextAnalysis.selectedIndex].text : 'None';
+            
+            if (projectValue) {
+                // Add context message to chat
+                const contextMessage = `<div class="alert alert-info">
+                    <strong>Context Updated:</strong><br>
+                    Project: ${projectText}<br>
+                    ${sampleValue ? `Sample: ${sampleText}<br>` : ''}
+                    ${analysisValue ? `Analysis: ${analysisText}` : ''}
+                </div>`;
+                
+                addMessage('assistant', contextMessage);
+            } else {
+                addMessage('assistant', '<div class="alert alert-warning">Please select at least a project to set context.</div>');
+            }
+        });
+        
+        // Tool buttons
+        document.getElementById('toolSpeciesIdentification').addEventListener('click', function() {
+            addMessage('user', 'Help me identify species in my current sample');
+            
+            setTimeout(() => {
+                addMessage('assistant', `<div class="tool-result">
+                    <h5><i class="fas fa-fish text-primary me-2"></i>Species Identification Results</h5>
+                    <p>I've analyzed your sample and identified the following species with high confidence:</p>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Species</th>
+                                <th>Confidence</th>
+                                <th>Abundance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><em>Architeuthis dux</em> (Giant Squid)</td>
+                                <td>98%</td>
+                                <td>Rare</td>
+                            </tr>
+                            <tr>
+                                <td><em>Bathynomus giganteus</em> (Giant Isopod)</td>
+                                <td>95%</td>
+                                <td>Common</td>
+                            </tr>
+                            <tr>
+                                <td><em>Grimpoteuthis</em> sp. (Dumbo Octopus)</td>
+                                <td>92%</td>
+                                <td>Uncommon</td>
+                            </tr>
+                            <tr>
+                                <td><em>Alvinocaris longirostris</em> (Deep-sea Shrimp)</td>
+                                <td>89%</td>
+                                <td>Abundant</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>`);
+            }, 1500);
+        });
+        
+        document.getElementById('toolLiteratureSearch').addEventListener('click', function() {
+            addMessage('user', 'Find recent papers related to my research');
+            
+            setTimeout(() => {
+                addMessage('assistant', `<div class="tool-result">
+                    <h5><i class="fas fa-book text-primary me-2"></i>Literature Search Results</h5>
+                    <p>Based on your research context, here are relevant recent publications:</p>
+                    <ol>
+                        <li>
+                            <strong>Johnson et al. (2023)</strong>. "Metabarcoding Reveals Hidden Diversity in Deep-Sea Hydrothermal Vents"<br>
+                            <small class="text-muted">Journal of Marine Biology, 45(3), 289-304</small>
+                            <a href="#" class="ms-2 small">Abstract</a>
+                        </li>
+                        <li>
+                            <strong>Zhang & Williams (2022)</strong>. "Temporal Patterns in eDNA Detection Across Bathymetric Gradients"<br>
+                            <small class="text-muted">Environmental DNA, 12(2), 156-172</small>
+                            <a href="#" class="ms-2 small">Abstract</a>
+                        </li>
+                        <li>
+                            <strong>Patel et al. (2023)</strong>. "Comparing eDNA and Traditional Sampling Methods in Deep Ocean Ecosystems"<br>
+                            <small class="text-muted">Scientific Reports, 13, 45892</small>
+                            <a href="#" class="ms-2 small">Abstract</a>
+                        </li>
+                        <li>
+                            <strong>Nakamura et al. (2022)</strong>. "Novel Bioinformatic Approaches for Deep-Sea eDNA Analysis"<br>
+                            <small class="text-muted">Bioinformatics, 38(12), 3045-3058</small>
+                            <a href="#" class="ms-2 small">Abstract</a>
+                        </li>
+                    </ol>
+                </div>`);
+            }, 1500);
+        });
+        
+        // Save chat modal
+        document.getElementById('saveChat').addEventListener('click', function() {
+            const saveChatModal = new bootstrap.Modal(document.getElementById('saveChatModal'));
+            saveChatModal.show();
+        });
+        
+        document.getElementById('saveChatConfirm').addEventListener('click', function() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('saveChatModal'));
+            modal.hide();
+            
+            // Show success message
+            addMessage('assistant', '<div class="alert alert-success">Conversation saved successfully!</div>');
+        });
+        
+        // Clear chat modal
+        document.getElementById('clearChat').addEventListener('click', function() {
+            const clearChatModal = new bootstrap.Modal(document.getElementById('clearChatModal'));
+            clearChatModal.show();
+        });
+        
+        document.getElementById('clearChatConfirm').addEventListener('click', function() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('clearChatModal'));
+            modal.hide();
+            
+            // Clear chat except for the welcome message
+            while (chatContainer.children.length > 1) {
+                chatContainer.removeChild(chatContainer.lastChild);
+            }
+        });
+    });
+</script>
+
+<style>
+    /* Chat Styles */
+    .chat-container {
+        height: 400px;
+        overflow-y: auto;
+        padding: 1rem;
+        background-color: #f8fcff;
+        border-radius: 0.25rem;
+    }
+    
+    .message {
+        display: flex;
+        margin-bottom: 1rem;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .user-message {
+        flex-direction: row-reverse;
+    }
+    
+    .message-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .user-message .message-avatar {
+        background-color: var(--secondary-color);
+    }
+    
+    .message-content {
+        max-width: 80%;
+        margin: 0 10px;
+    }
+    
+    .message-text {
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+        background-color: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .assistant-message .message-text {
+        border-top-left-radius: 0;
+        background-color: #e6f7ff;
+    }
+    
+    .user-message .message-text {
+        border-top-right-radius: 0;
+        background-color: #e6fff7;
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-align: right;
+        margin-top: 0.25rem;
+    }
+    
+    /* Typing indicator */
+    .typing-dots {
+        display: flex;
+        padding: 0.5rem 0;
+    }
+    
+    .typing-dots span {
+        height: 8px;
+        width: 8px;
+        margin: 0 4px;
+        background-color: #3498db;
+        border-radius: 50%;
+        opacity: 0.4;
+        animation: pulse 1s infinite ease-in-out;
+    }
+    
+    .typing-dots span:nth-child(1) {
+        animation-delay: 0ms;
+    }
+    
+    .typing-dots span:nth-child(2) {
+        animation-delay: 200ms;
+    }
+    
+    .typing-dots span:nth-child(3) {
+        animation-delay: 400ms;
+    }
+    
+    @keyframes pulse {
+        0% {
+            opacity: 0.4;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+        100% {
+            opacity: 0.4;
+            transform: scale(1);
+        }
+    }
+    
+    /* Tool result styling */
+    .tool-result {
+        background-color: #f0f8ff;
+        border-left: 4px solid var(--primary-color);
+        padding: 1rem;
+        border-radius: 0.25rem;
+    }
+    
+    .tool-result h5 {
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+    }
+    
+    /* Animation */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}

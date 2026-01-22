@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Notifications{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-bell me-1"></i>Notifications</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="display-5 fw-bold text-primary"><i class="fas fa-bell me-2"></i>Notifications</h1>
+        <p class="lead">Stay updated with the latest activities and alerts from your research projects.</p>
+        <div class="ocean-divider mb-4"></div>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <div class="btn-group">
+            <button type="button" class="btn ocean-button" id="markAllReadBtn">
+                <i class="fas fa-check-double me-1"></i>Mark All Read
+            </button>
+            <button type="button" class="btn ocean-button-secondary" id="notificationSettingsBtn" data-bs-toggle="modal" data-bs-target="#notificationSettingsModal">
+                <i class="fas fa-cog me-1"></i>Settings
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card ocean-card">
+            <div class="card-body p-3">
+                <div class="d-flex flex-wrap align-items-center">
+                    <div class="me-3 mb-2 mb-md-0">
+                        <label class="form-label mb-0 me-2">Filter by:</label>
+                    </div>
+                    <div class="me-3 mb-2 mb-md-0">
+                        <select class="form-select form-select-sm ocean-input" id="typeFilter">
+                            <option value="all" selected>All Types</option>
+                            <option value="project">Project</option>
+                            <option value="sample">Sample</option>
+                            <option value="analysis">Analysis</option>
+                            <option value="collaboration">Collaboration</option>
+                            <option value="system">System</option>
+                        </select>
+                    </div>
+                    <div class="me-3 mb-2 mb-md-0">
+                        <select class="form-select form-select-sm ocean-input" id="statusFilter">
+                            <option value="all" selected>All Status</option>
+                            <option value="unread">Unread</option>
+                            <option value="read">Read</option>
+                        </select>
+                    </div>
+                    <div class="me-3 mb-2 mb-md-0">
+                        <select class="form-select form-select-sm ocean-input" id="timeFilter">
+                            <option value="all" selected>All Time</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                        </select>
+                    </div>
+                    <div class="ms-auto">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="clearFiltersBtn">
+                            <i class="fas fa-times me-1"></i>Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card ocean-card">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-stream me-2"></i>All Notifications</h5>
+                    <span class="badge bg-light text-primary">15 Total</span>
+                </div>
+            </div>
+            <div class="list-group list-group-flush">
+                <!-- Unread Notification - Project -->
+                <div class="list-group-item list-group-item-action p-3 notification-item unread">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="notification-icon bg-primary text-white me-3">
+                                <i class="fas fa-project-diagram"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-bold">New collaborator joined your project</h6>
+                                <p class="mb-1">Dr. Michael Chen has accepted your invitation to collaborate on "Pacific Coral Reef Biodiversity".</p>
+                                <small class="text-muted"><i class="fas fa-clock me-1"></i>10 minutes ago</small>
+                            </div>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-primary me-1" title="Mark as read">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" title="View details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Unread Notification - Analysis -->
+                <div class="list-group-item list-group-item-action p-3 notification-item unread">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="notification-icon bg-success text-white me-3">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-bold">Analysis completed successfully</h6>
+                                <p class="mb-1">Your analysis "Coral Reef Biodiversity Assessment" has completed successfully. View the results now.</p>
+                                <small class="text-muted"><i class="fas fa-clock me-1"></i>25 minutes ago</small>
+                            </div>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-primary me-1" title="Mark as read">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" title="View results">
+                                <i class="fas fa-chart-pie"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Unread Notification - Sample -->
+                <div class="list-group-item list-group-item-action p-3 notification-item unread">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="notification-icon bg-info text-white me-3">
+                                <i class="fas fa-vial"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-bold">Sample processing started</h6>
+                                <p class="mb-1">Processing has begun for your sample "Arctic Water Column B". Estimated completion time: 2 hours.</p>
+                                <small class="text-muted"><i class="fas fa-clock me-1"></i>1 hour ago</small>
+                            </div>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-primary me-1" title="Mark as read">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" title="View progress">
+                                <i class="fas fa-spinner"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Read Notification - System -->
+                <div class="list-group-item list-group-item-action p-3 notification-item">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="notification-icon bg-warning text-white me-3">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">Storage quota reaching limit</h6>
+                                <p class="mb-1">You have used 85% of your storage quota. Consider upgrading your plan or removing unused files.</p>
+                                <small class="text-muted"><i class="fas fa-clock me-1"></i>Yesterday</small>
+                            </div>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-warning" title="Manage storage">
+                                <i class="fas fa-database"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Read Notification - Collaboration -->
+                <div class="list-group-item list-group-item-action p-3 notification-item">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="notification-icon bg-secondary text-white me-3">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">New collaboration invitation</h6>
+                                <p class="mb-1">Dr. Emily Taylor has invited you to collaborate on "Deep Sea Hydrothermal Vents" project.</p>
+                                <small class="text-muted"><i class="fas fa-clock me-1"></i>2 days ago</small>
+                            </div>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-success me-1" title="Accept">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" title="Decline">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Read Notification - Badge -->
+                <div class="list-group-item list-group-item-action p-3 notification-item">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="notification-icon bg-primary text-white me-3">
+                                <i class="fas fa-award"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1">New badge earned</h6>
+                                <p class="mb-1">Congratulations! You've earned the "Marine Explorer" badge for completing 10 analyses.</p>
+                                <small class="text-muted"><i class="fas fa-clock me-1"></i>3 days ago</small>
+                            </div>
+                        </div>
+                        <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-primary" title="View badge">
+                                <i class="fas fa-medal"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-light">
+                <nav aria-label="Notification pagination">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Settings Modal -->
+<div class="modal fade" id="notificationSettingsModal" tabindex="-1" aria-labelledby="notificationSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="notificationSettingsModalLabel"><i class="fas fa-bell me-2"></i>Notification Settings</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6 class="mb-3">Email Notifications</h6>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="emailProjectUpdates" checked>
+                        <label class="form-check-label" for="emailProjectUpdates">Project updates</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="emailAnalysisComplete" checked>
+                        <label class="form-check-label" for="emailAnalysisComplete">Analysis completion</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="emailCollaborationInvites" checked>
+                        <label class="form-check-label" for="emailCollaborationInvites">Collaboration invitations</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="emailSystemAlerts">
+                        <label class="form-check-label" for="emailSystemAlerts">System alerts</label>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h6 class="mb-3">In-App Notifications</h6>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="appProjectUpdates" checked>
+                        <label class="form-check-label" for="appProjectUpdates">Project updates</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="appAnalysisComplete" checked>
+                        <label class="form-check-label" for="appAnalysisComplete">Analysis completion</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="appCollaborationInvites" checked>
+                        <label class="form-check-label" for="appCollaborationInvites">Collaboration invitations</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="appSystemAlerts" checked>
+                        <label class="form-check-label" for="appSystemAlerts">System alerts</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="appBadgeNotifications" checked>
+                        <label class="form-check-label" for="appBadgeNotifications">Badge achievements</label>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h6 class="mb-3">Notification Frequency</h6>
+                <div class="mb-3">
+                    <label for="emailFrequency" class="form-label">Email Digest Frequency</label>
+                    <select class="form-select ocean-input" id="emailFrequency">
+                        <option value="immediate">Immediate</option>
+                        <option value="daily" selected>Daily Digest</option>
+                        <option value="weekly">Weekly Digest</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn ocean-button">Save Settings</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .notification-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .notification-item.unread {
+        background-color: rgba(13, 110, 253, 0.05);
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .notification-item:hover {
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    
+    @media (max-width: 767.98px) {
+        .notification-actions {
+            margin-top: 10px;
+        }
+        .d-flex.w-100 {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}

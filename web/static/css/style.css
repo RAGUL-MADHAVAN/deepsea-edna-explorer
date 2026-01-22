@@ -1,0 +1,395 @@
+/* DeepSea eDNA Explorer - Main Stylesheet */
+
+:root {
+    --primary-color: #0077be;
+    --primary-light: #00a8e8;
+    --primary-dark: #005c91;
+    --secondary-color: #00cccc;
+    --accent-color: #ff7f50;
+    --light-bg: #f0f8ff;
+    --dark-bg: #003366;
+    --text-color: #333333;
+    --light-text: #ffffff;
+    --border-color: #e0f0ff;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    color: var(--text-color);
+    background-color: var(--light-bg);
+}
+
+/* Ocean Wave Animation */
+.wave {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    background: url('https://cdn.pixabay.com/photo/2018/05/10/20/00/waves-3389102_1280.png');
+    background-size: 1000px 100px;
+}
+
+/* Ocean Login Styles */
+.ocean-login-container {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+    padding: 50px 0;
+    background: linear-gradient(180deg, #f0f8ff 0%, #e6f2ff 100%);
+}
+
+.ocean-waves {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 200px;
+    z-index: 0;
+}
+
+.wave-top {
+    position: absolute;
+    bottom: 140px;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    background: url('https://cdn.pixabay.com/photo/2018/05/10/20/00/waves-3389102_1280.png');
+    background-size: 1000px 100px;
+    opacity: 0.3;
+    animation: wave-animation 20s linear infinite;
+}
+
+.wave-middle {
+    position: absolute;
+    bottom: 70px;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    background: url('https://cdn.pixabay.com/photo/2018/05/10/20/00/waves-3389102_1280.png');
+    background-size: 1000px 100px;
+    opacity: 0.5;
+    animation: wave-animation 15s linear infinite;
+}
+
+.wave-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100px;
+    background: url('https://cdn.pixabay.com/photo/2018/05/10/20/00/waves-3389102_1280.png');
+    background-size: 1000px 100px;
+    opacity: 0.7;
+    animation: wave-animation 10s linear infinite;
+}
+
+@keyframes wave-animation {
+    0% {
+        background-position-x: 0;
+    }
+    100% {
+        background-position-x: 1000px;
+    }
+}
+
+.login-card {
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 105, 192, 0.2);
+    position: relative;
+    z-index: 1;
+    border: none;
+}
+
+.ocean-gradient {
+    background: linear-gradient(135deg, #0077be 0%, #00a8e8 100%);
+}
+
+.login-icon {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 20px;
+}
+
+.ocean-input {
+    border-color: #e0f0ff;
+    background-color: #f8fcff;
+    padding: 10px 15px;
+    border-radius: 0 5px 5px 0;
+}
+
+.ocean-input:focus {
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.15);
+    border-color: #b8e0ff;
+}
+
+.ocean-input-icon {
+    background-color: #e0f0ff;
+    border-color: #e0f0ff;
+    color: #0077be;
+}
+
+.ocean-button {
+    background: linear-gradient(135deg, #0077be 0%, #00a8e8 100%);
+    border: none;
+    padding: 10px 20px;
+    transition: all 0.3s ease;
+}
+
+.ocean-button:hover {
+    background: linear-gradient(135deg, #005c91 0%, #0089c0 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 105, 192, 0.3);
+}
+
+.ocean-link {
+    color: #0077be;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.ocean-link:hover {
+    color: #005c91;
+    text-decoration: underline;
+}
+
+.demo-card {
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    border: none;
+    position: relative;
+    z-index: 1;
+}
+
+.demo-item {
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
+}
+
+.demo-item:hover {
+    background-color: #f8fcff;
+    border-left: 3px solid #0077be;
+}
+
+/* Bubbles Animation */
+.bubbles {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.bubble {
+    position: absolute;
+    bottom: -100px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    opacity: 0.5;
+    animation: rise 15s infinite ease-in;
+}
+
+.bubble:nth-child(1) {
+    width: 40px;
+    height: 40px;
+    left: 10%;
+    animation-duration: 8s;
+}
+
+.bubble:nth-child(2) {
+    width: 20px;
+    height: 20px;
+    left: 20%;
+    animation-duration: 5s;
+    animation-delay: 1s;
+}
+
+.bubble:nth-child(3) {
+    width: 50px;
+    height: 50px;
+    left: 35%;
+    animation-duration: 10s;
+    animation-delay: 2s;
+}
+
+.bubble:nth-child(4) {
+    width: 80px;
+    height: 80px;
+    left: 50%;
+    animation-duration: 7s;
+    animation-delay: 0s;
+}
+
+.bubble:nth-child(5) {
+    width: 35px;
+    height: 35px;
+    left: 55%;
+    animation-duration: 6s;
+    animation-delay: 1s;
+}
+
+.bubble:nth-child(6) {
+    width: 45px;
+    height: 45px;
+    left: 65%;
+    animation-duration: 8s;
+    animation-delay: 3s;
+}
+
+.bubble:nth-child(7) {
+    width: 25px;
+    height: 25px;
+    left: 75%;
+    animation-duration: 7s;
+    animation-delay: 2s;
+}
+
+.bubble:nth-child(8) {
+    width: 30px;
+    height: 30px;
+    left: 85%;
+    animation-duration: 9s;
+    animation-delay: 1s;
+}
+
+@keyframes rise {
+    0% {
+        bottom: -100px;
+        transform: translateX(0);
+    }
+    50% {
+        transform: translateX(100px);
+    }
+    100% {
+        bottom: 1080px;
+        transform: translateX(-200px);
+    }
+}
+
+/* Navigation Styles */
+.navbar {
+    background-color: var(--primary-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 700;
+    color: var(--light-text);
+}
+
+.navbar .nav-link {
+    color: var(--light-text);
+    transition: all 0.3s ease;
+}
+
+.navbar .nav-link:hover {
+    color: var(--light-text);
+    transform: translateY(-2px);
+}
+
+/* Ensure tab labels are readable (Projects/Profile tabs) */
+.nav-tabs .nav-link {
+    color: #0f172a; /* dark text */
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--primary-dark);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+/* Profile sidebar tabs */
+.profile-nav .nav-link {
+    color: #0f172a;
+}
+
+.profile-nav .nav-link.active {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+/* Card Styles */
+.card {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    border: none;
+    margin-bottom: 20px;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    font-weight: 600;
+    border-bottom: none;
+}
+
+/* Button Styles */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: var(--light-text);
+}
+
+/* Form Styles */
+.form-control:focus {
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.15);
+}
+
+/* Footer Styles */
+footer {
+    background-color: var(--dark-bg);
+    color: var(--light-text);
+    padding: 30px 0;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .login-card {
+        margin: 0 15px;
+    }
+    
+    .wave-top, .wave-middle, .wave-bottom {
+        height: 50px;
+        background-size: 500px 50px;
+    }
+    
+    .wave-top {
+        bottom: 70px;
+    }
+    
+    .wave-middle {
+        bottom: 35px;
+    }
+    
+    .bubble {
+        display: none;
+    }
+}

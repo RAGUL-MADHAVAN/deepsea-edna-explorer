@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Export Project: {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary">{{ project.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Export Project</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<!-- Export Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="display-5 fw-bold text-primary">
+            <i class="fas fa-file-export me-2"></i>Export Project: {{ project.title }}
+        </h1>
+        <p class="lead">Export your project data in various formats for sharing or archiving.</p>
+    </div>
+</div>
+
+<!-- Export Options -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Export Options</h5>
+            </div>
+            <div class="card-body">
+                <form id="exportForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="exportFormat" class="form-label">Export Format</label>
+                            <select class="form-select" id="exportFormat" name="exportFormat">
+                                <option value="csv">CSV (Comma Separated Values)</option>
+                                <option value="json">JSON (JavaScript Object Notation)</option>
+                                <option value="excel">Excel Spreadsheet</option>
+                                <option value="pdf">PDF Report</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="dataScope" class="form-label">Data Scope</label>
+                            <select class="form-select" id="dataScope" name="dataScope">
+                                <option value="project">Project Metadata Only</option>
+                                <option value="samples">Project + Samples</option>
+                                <option value="analyses">Project + Samples + Analyses</option>
+                                <option value="complete">Complete Project Data (including results)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="includeVisualizations" name="includeVisualizations">
+                        <label class="form-check-label" for="includeVisualizations">
+                            Include Visualizations (where applicable)
+                        </label>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="includeRawData" name="includeRawData">
+                        <label class="form-check-label" for="includeRawData">
+                            Include Raw Data Files
+                        </label>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="generateExport">
+                        <i class="fas fa-file-export me-2"></i>Generate Export
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Project Summary -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Project Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Project Details</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Title:</th>
+                                <td>{{ project.title }}</td>
+                            </tr>
+                            <tr>
+                                <th>Description:</th>
+                                <td>{{ project.description }}</td>
+                            </tr>
+                            <tr>
+                                <th>Created:</th>
+                                <td>{{ project.created_at.strftime('%Y-%m-%d') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Owner:</th>
+                                <td>{{ project.owner.name }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Project Statistics</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Samples:</th>
+                                <td>{{ samples|length }}</td>
+                            </tr>
+                            <tr>
+                                <th>Analyses:</th>
+                                <td>{{ analyses|length }}</td>
+                            </tr>
+                            <tr>
+                                <th>Collaborators:</th>
+                                <td>{{ project.collaborators|length }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sample List -->
+{% if samples %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-vial me-2"></i>Samples ({{ samples|length }})</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Collection Date</th>
+                                <th>Analyses</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sample in samples %}
+                            <tr>
+                                <td>{{ sample.name }}</td>
+                                <td>{{ sample.sample_type }}</td>
+                                <td>{{ sample.collection_date.strftime('%Y-%m-%d') if sample.collection_date else 'N/A' }}</td>
+                                <td>
+                                    {% set sample_analyses = [] %}
+                                    {% for analysis in analyses %}
+                                        {% if analysis.sample_id == sample.id %}
+                                            {% do sample_analyses.append(analysis) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ sample_analyses|length }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Mock Export Preview -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Export Preview</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-center text-muted">
+                    <i class="fas fa-file-export fa-3x mb-3"></i><br>
+                    Select export options above and click "Generate Export" to preview your data.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Export Functionality -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle export generation (mock functionality)
+        document.getElementById('generateExport').addEventListener('click', function() {
+            const format = document.getElementById('exportFormat').value;
+            const scope = document.getElementById('dataScope').value;
+            const includeVisualizations = document.getElementById('includeVisualizations').checked;
+            const includeRawData = document.getElementById('includeRawData').checked;
+            
+            // In a real application, this would trigger an AJAX request to generate the export
+            // For demonstration, we'll just show an alert
+            alert(`Export requested with format: ${format}, scope: ${scope}, ` + 
+                  `include visualizations: ${includeVisualizations}, include raw data: ${includeRawData}`);
+            
+            // Mock download link
+            const previewDiv = document.querySelector('.card:last-child .card-body');
+            previewDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Export generated successfully!
+                </div>
+                <div class="text-center">
+                    <p><i class="fas fa-file-${format === 'pdf' ? 'pdf' : 'alt'} fa-3x mb-3"></i></p>
+                    <p><strong>project_export_${new Date().toISOString().slice(0,10)}.${format}</strong></p>
+                    <p>${getFileSizeDescription(format, scope)}</p>
+                    <a href="#" class="btn btn-primary">
+                        <i class="fas fa-download me-2"></i>Download Export
+                    </a>
+                </div>
+            `;
+        });
+        
+        // Helper function to generate mock file size description
+        function getFileSizeDescription(format, scope) {
+            let baseSize = 0;
+            
+            // Calculate mock file size based on format and scope
+            switch(scope) {
+                case 'project': baseSize = 10; break;
+                case 'samples': baseSize = 50; break;
+                case 'analyses': baseSize = 120; break;
+                case 'complete': baseSize = 250; break;
+            }
+            
+            // Adjust for format
+            switch(format) {
+                case 'csv': return `${baseSize} KB`;
+                case 'json': return `${baseSize * 1.2} KB`;
+                case 'excel': return `${baseSize * 1.5} KB`;
+                case 'pdf': return `${baseSize * 2} KB`;
+            }
+        }
+    });
+</script>
+{% endblock %}

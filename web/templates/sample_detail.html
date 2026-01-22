@@ -1,0 +1,480 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Sample Details{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder me-1"></i>{{ project.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-flask me-1"></i>{{ sample.name }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="display-5 fw-bold text-primary"><i class="fas fa-flask me-2 pulse-icon"></i>{{ sample.name }}</h1>
+        <p class="lead">{{ sample.description|default('No description provided', true) }}</p>
+        <div class="ocean-divider mb-3"></div>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <div class="btn-group">
+            <a href="{{ url_for('run_analysis', project_id=project.id, sample_id=sample.id) }}" class="btn ocean-button">
+                <i class="fas fa-play-circle me-1 pulse-icon"></i>Run Analysis
+            </a>
+            <button type="button" class="btn ocean-button dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ url_for('download_sample', project_id=project.id, sample_id=sample.id) }}">
+                    <i class="fas fa-download me-2 text-primary"></i>Download Sample
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('edit_sample', project_id=project.id, sample_id=sample.id) }}">
+                    <i class="fas fa-edit me-2 text-primary"></i>Edit Sample
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteSampleModal">
+                    <i class="fas fa-trash-alt me-2"></i>Delete Sample
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="ocean-card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Sample Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5 text-primary"><i class="fas fa-calendar-alt me-1"></i>Collection Date:</dt>
+                    <dd class="col-sm-7">{{ sample.collection_date|default('Not specified', true) }}</dd>
+                    
+                    <dt class="col-sm-5 text-primary"><i class="fas fa-map-marker-alt me-1"></i>Location:</dt>
+                    <dd class="col-sm-7">{{ sample.location|default('Not specified', true) }}</dd>
+                    
+                    <dt class="col-sm-5 text-primary"><i class="fas fa-water me-1"></i>Depth:</dt>
+                    <dd class="col-sm-7">{% if sample.depth %}{{ sample.depth }} m{% else %}Not specified{% endif %}</dd>
+                    
+                    <dt class="col-sm-5 text-primary"><i class="fas fa-vial me-1"></i>Sample Type:</dt>
+                    <dd class="col-sm-7">{{ sample.sample_type }}</dd>
+                    
+                    <dt class="col-sm-5 text-primary"><i class="fas fa-file-code me-1"></i>File Format:</dt>
+                    <dd class="col-sm-7">{{ sample.file_format|upper }}</dd>
+                    
+                    <dt class="col-sm-5 text-primary"><i class="fas fa-weight me-1"></i>File Size:</dt>
+                    <dd class="col-sm-7">{{ sample.file_size|filesizeformat }}</dd>
+                    
+                    <dt class="col-sm-5 text-primary"><i class="fas fa-dna me-1"></i>Sequence Count:</dt>
+                    <dd class="col-sm-7">{{ sample.sequence_count|default('Not analyzed', true)|numberformat }}</dd>
+                    
+                    <dt class="col-sm-5 text-primary"><i class="fas fa-user me-1"></i>Uploaded By:</dt>
+                    <dd class="col-sm-7">
+                        <a href="{{ url_for('profile', username=sample.user.username) }}" class="text-primary">
+                            {{ sample.user.full_name }}
+                        </a>
+                    </dd>
+                    
+                    <dt class="col-sm-5 text-primary"><i class="fas fa-clock me-1"></i>Uploaded:</dt>
+                    <dd class="col-sm-7">{{ sample.created_at|timeago }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8 mb-4">
+        <div class="ocean-card h-100">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-flask me-2 pulse-icon"></i>Analyses</h5>
+                <a href="{{ url_for('run_analysis', project_id=project.id, sample_id=sample.id) }}" class="btn btn-sm ocean-button-sm">
+                    <i class="fas fa-plus me-1 pulse-icon"></i>New Analysis
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if analyses %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-primary text-white">
+                            <tr>
+                                <th><i class="fas fa-tag me-1"></i>Name</th>
+                                <th><i class="fas fa-cogs me-1"></i>Type</th>
+                                <th><i class="fas fa-info-circle me-1"></i>Status</th>
+                                <th><i class="fas fa-calendar me-1"></i>Created</th>
+                                <th><i class="fas fa-tools me-1"></i>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for analysis in analyses %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('analysis_detail', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}">
+                                        {{ analysis.name }}
+                                    </a>
+                                    {% if analysis.description %}
+                                    <div class="text-muted small text-truncate" style="max-width: 200px;">
+                                        {{ analysis.description }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ analysis.analysis_type }}</td>
+                                <td>
+                                    {% if analysis.status == 'completed' %}
+                                    <span class="ocean-badge bg-success"><i class="fas fa-check-circle me-1"></i>Completed</span>
+                                    {% elif analysis.status == 'failed' %}
+                                    <span class="ocean-badge bg-danger"><i class="fas fa-times-circle me-1"></i>Failed</span>
+                                    {% elif analysis.status == 'running' %}
+                                    <span class="ocean-badge bg-primary"><i class="fas fa-spinner fa-spin me-1"></i>Running</span>
+                                    <div class="progress mt-1" style="height: 4px;">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: {{ analysis.progress|default(50, true) }}%"></div>
+                                    </div>
+                                    {% elif analysis.status == 'queued' %}
+                                    <span class="ocean-badge bg-secondary"><i class="fas fa-clock me-1"></i>Queued</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ analysis.created_at|timeago }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('analysis_detail', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}" class="btn btn-outline-primary" title="View Analysis">
+                                            <i class="fas fa-eye pulse-icon"></i>
+                                        </a>
+                                        {% if analysis.status == 'completed' %}
+                                        <a href="{{ url_for('download_analysis_results', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}" class="btn btn-outline-primary" title="Download Results">
+                                            <i class="fas fa-download pulse-icon"></i>
+                                        </a>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-outline-danger" title="Delete Analysis" data-bs-toggle="modal" data-bs-target="#deleteAnalysisModal" data-analysis-id="{{ analysis.id }}" data-analysis-name="{{ analysis.name }}">
+                                            <i class="fas fa-trash-alt pulse-icon"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="mb-3">
+                        <i class="fas fa-flask fa-3x text-primary pulse-icon"></i>
+                    </div>
+                    <h5 class="text-primary">No analyses yet</h5>
+                    <p class="text-muted">Run your first analysis to discover what's in your sample.</p>
+                    <a href="{{ url_for('run_analysis', project_id=project.id, sample_id=sample.id) }}" class="btn ocean-button">
+                        <i class="fas fa-play-circle me-1 pulse-icon"></i>Run Analysis
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% if analyses and analyses|length > 5 %}
+            <div class="card-footer text-center">
+                <a href="{{ url_for('sample_analyses', project_id=project.id, sample_id=sample.id) }}" class="btn btn-sm ocean-button-sm"><i class="fas fa-list me-1 pulse-icon"></i>View All Analyses</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="ocean-card">
+            <div class="card-header bg-primary text-white">
+                <ul class="nav nav-tabs card-header-tabs" id="sampleTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="sequence-preview-tab" data-bs-toggle="tab" data-bs-target="#sequence-preview" type="button" role="tab" aria-controls="sequence-preview" aria-selected="true">
+                            <i class="fas fa-dna me-1 pulse-icon"></i>Sequence Preview
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata" type="button" role="tab" aria-controls="metadata" aria-selected="false">
+                            <i class="fas fa-table me-1 pulse-icon"></i>Metadata
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="comments-tab" data-bs-toggle="tab" data-bs-target="#comments" type="button" role="tab" aria-controls="comments" aria-selected="false">
+                            <i class="fas fa-comments me-1 pulse-icon"></i>Comments
+                            <span class="ocean-badge ms-1">{{ comments|length }}</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="sampleTabsContent">
+                    <div class="tab-pane fade show active" id="sequence-preview" role="tabpanel" aria-labelledby="sequence-preview-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 text-primary"><i class="fas fa-dna me-2 pulse-icon"></i>Sequence Preview</h5>
+                            <div>
+                                <span class="text-muted me-2">Showing first 10 sequences</span>
+                                <a href="{{ url_for('download_sample', project_id=project.id, sample_id=sample.id) }}" class="btn btn-sm ocean-button-sm">
+                                    <i class="fas fa-download me-1 pulse-icon"></i>Download Full File
+                                </a>
+                            </div>
+                        </div>
+                        <div class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto; font-family: monospace;">
+                            {% if sample.file_format == 'fasta' %}
+                                {% for header, sequence in sequence_preview %}
+                                <div class="mb-2">
+                                    <div class="text-primary">&gt;{{ header }}</div>
+                                    <div class="text-break">{{ sequence }}</div>
+                                </div>
+                                {% endfor %}
+                            {% elif sample.file_format == 'fastq' %}
+                                {% for record in sequence_preview %}
+                                <div class="mb-3">
+                                    <div class="text-primary">@{{ record.header }}</div>
+                                    <div>{{ record.sequence }}</div>
+                                    <div class="text-muted">+</div>
+                                    <div class="text-muted">{{ record.quality }}</div>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="metadata" role="tabpanel" aria-labelledby="metadata-tab">
+                        <h5 class="mb-3 text-primary"><i class="fas fa-table me-2 pulse-icon"></i>Sample Metadata</h5>
+                        {% if metadata %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead class="bg-primary text-white">
+                                    <tr>
+                                        <th><i class="fas fa-key me-1"></i>Key</th>
+                                        <th><i class="fas fa-info-circle me-1"></i>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for key, value in metadata.items() %}
+                                    <tr>
+                                        <td>{{ key }}</td>
+                                        <td>{{ value }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <div class="mb-3">
+                                <i class="fas fa-table fa-3x text-primary pulse-icon"></i>
+                            </div>
+                            <h5 class="text-primary">No metadata available</h5>
+                            <p class="text-muted">This sample doesn't have associated metadata.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="tab-pane fade" id="comments" role="tabpanel" aria-labelledby="comments-tab">
+                        <div class="comments-section">
+                            <h5 class="mb-3 text-primary"><i class="fas fa-comments me-2 pulse-icon"></i>Sample Comments</h5>
+                            {% if comments %}
+                            <div class="comments-list mb-4 ocean-card p-3">
+                                {% for comment in comments %}
+                                <div class="comment mb-3">
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            <img src="{{ comment.user.profile_picture or url_for('static', filename='img/default-profile.png') }}" class="rounded-circle" width="40" height="40" alt="{{ comment.user.username }}">
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <a href="{{ url_for('profile', username=comment.user.username) }}" class="fw-bold text-decoration-none text-primary"><i class="fas fa-user me-1"></i>{{ comment.user.full_name }}</a>
+                                                    <small class="text-muted ms-2"><i class="fas fa-clock me-1"></i>{{ comment.created_at|timeago }}</small>
+                                                </div>
+                                                {% if current_user.id == comment.user_id %}
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-link text-primary" type="button" data-bs-toggle="dropdown">
+                                                        <i class="fas fa-ellipsis-v pulse-icon"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editCommentModal" data-comment-id="{{ comment.id }}" data-comment-text="{{ comment.content }}"><i class="fas fa-edit me-1 text-primary"></i>Edit</a></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteCommentModal" data-comment-id="{{ comment.id }}"><i class="fas fa-trash-alt me-1"></i>Delete</a></li>
+                                                    </ul>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="mt-2">{{ comment.content|nl2br }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            <div class="comment-form ocean-card p-3 mt-3">
+                                <form method="POST" action="{{ url_for('add_sample_comment', project_id=project.id, sample_id=sample.id) }}">
+                                    {{ comment_form.hidden_tag() }}
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            <img src="{{ current_user.profile_picture or url_for('static', filename='img/default-profile.png') }}" class="rounded-circle" width="40" height="40" alt="{{ current_user.username }}">
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <div class="mb-3">
+                                                {{ comment_form.content(class="form-control", rows=2, placeholder="Add a comment...") }}
+                                            </div>
+                                            <div class="text-end">
+                                                <button type="submit" class="btn ocean-button">
+                                                    <i class="fas fa-paper-plane me-1 pulse-icon"></i>Post Comment
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Sample Modal -->
+<div class="modal fade" id="deleteSampleModal" tabindex="-1" aria-labelledby="deleteSampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content ocean-card">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="deleteSampleModalLabel"><i class="fas fa-trash-alt me-1 pulse-icon"></i>Delete Sample</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the sample <strong class="text-primary">{{ sample.name }}</strong>?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>This action cannot be undone. All analyses associated with this sample will also be deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i>Cancel</button>
+                <form method="POST" action="{{ url_for('delete_sample', project_id=project.id, sample_id=sample.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-trash-alt me-1"></i>Delete Sample</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Analysis Modal -->
+<div class="modal fade" id="deleteAnalysisModal" tabindex="-1" aria-labelledby="deleteAnalysisModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content ocean-card">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="deleteAnalysisModalLabel"><i class="fas fa-trash-alt me-1 pulse-icon"></i>Delete Analysis</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the analysis <strong id="analysisNameToDelete" class="text-primary"></strong>?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>This action cannot be undone. All results associated with this analysis will also be deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i>Cancel</button>
+                <form id="deleteAnalysisForm" method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-trash-alt me-1"></i>Delete Analysis</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Comment Modal -->
+<div class="modal fade" id="editCommentModal" tabindex="-1" aria-labelledby="editCommentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content ocean-card">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editCommentModalLabel"><i class="fas fa-edit me-1 pulse-icon"></i>Edit Comment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editCommentForm" method="POST" action="">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="editCommentContent" class="form-label text-primary"><i class="fas fa-comment me-1"></i>Comment</label>
+                        <textarea class="form-control" id="editCommentContent" name="content" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i>Cancel</button>
+                    <button type="submit" class="btn ocean-button"><i class="fas fa-save me-1 pulse-icon"></i>Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Comment Modal -->
+<div class="modal fade" id="deleteCommentModal" tabindex="-1" aria-labelledby="deleteCommentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content ocean-card">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="deleteCommentModalLabel"><i class="fas fa-trash-alt me-1 pulse-icon"></i>Delete Comment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this comment?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i>Cancel</button>
+                <form id="deleteCommentForm" method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger"><i class="fas fa-trash-alt me-1"></i>Delete Comment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set up delete analysis modal
+        const deleteAnalysisModal = document.getElementById('deleteAnalysisModal');
+        if (deleteAnalysisModal) {
+            deleteAnalysisModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const analysisId = button.getAttribute('data-analysis-id');
+                const analysisName = button.getAttribute('data-analysis-name');
+                
+                const analysisNameElement = document.getElementById('analysisNameToDelete');
+                const deleteForm = document.getElementById('deleteAnalysisForm');
+                
+                analysisNameElement.textContent = analysisName;
+                deleteForm.action = "{{ url_for('delete_analysis', project_id=project.id, sample_id=sample.id, analysis_id='__id__') }}".replace('__id__', analysisId);
+            });
+        }
+        
+        // Set up edit comment modal
+        const editCommentModal = document.getElementById('editCommentModal');
+        if (editCommentModal) {
+            editCommentModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const commentId = button.getAttribute('data-comment-id');
+                const commentText = button.getAttribute('data-comment-text');
+                
+                const commentTextarea = document.getElementById('editCommentContent');
+                const editForm = document.getElementById('editCommentForm');
+                
+                commentTextarea.value = commentText;
+                editForm.action = "{{ url_for('edit_sample_comment', project_id=project.id, sample_id=sample.id, comment_id='__id__') }}".replace('__id__', commentId);
+            });
+        }
+        
+        // Set up delete comment modal
+        const deleteCommentModal = document.getElementById('deleteCommentModal');
+        if (deleteCommentModal) {
+            deleteCommentModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const commentId = button.getAttribute('data-comment-id');
+                
+                const deleteForm = document.getElementById('deleteCommentForm');
+                deleteForm.action = "{{ url_for('delete_sample_comment', project_id=project.id, sample_id=sample.id, comment_id='__id__') }}".replace('__id__', commentId);
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,778 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ project.title }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<!-- Project Header -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="d-flex align-items-center mb-2">
+            <h1 class="display-5 fw-bold mb-0 text-primary"><i class="fas fa-project-diagram me-2"></i>{{ project.title }}</h1>
+            {% if project.is_public %}
+            <span class="ocean-badge bg-success ms-3"><i class="fas fa-globe me-1"></i>Public</span>
+            {% else %}
+            <span class="ocean-badge bg-secondary ms-3"><i class="fas fa-lock me-1"></i>Private</span>
+            {% endif %}
+        </div>
+        <p class="lead">{{ project.description }}</p>
+        <div class="ocean-divider mb-3"></div>
+        <div class="d-flex flex-wrap">
+            {% if project.location %}
+            <div class="me-4 mb-2">
+                <i class="fas fa-map-marker-alt me-1 text-primary"></i> {{ project.location }}
+            </div>
+            {% endif %}
+            
+            {% if project.depth_min and project.depth_max %}
+            <div class="me-4 mb-2">
+                <i class="fas fa-water me-1 text-primary"></i> {{ project.depth_min }} - {{ project.depth_max }} m
+            </div>
+            {% endif %}
+            
+            <div class="me-4 mb-2">
+                <i class="fas fa-calendar-alt me-1 text-primary"></i> Created {{ project.created_at.strftime('%Y-%m-%d') }}
+            </div>
+            
+            <div class="mb-2">
+                <i class="fas fa-clock me-1 text-primary"></i> Updated {{ project.updated_at.strftime('%Y-%m-%d') }}
+            </div>
+        </div>
+        
+        {% if project.tags %}
+        <div class="mt-2">
+            {% for tag in project.tags.split(',') %}
+            <span class="ocean-badge bg-light text-dark me-1 mb-1">{{ tag.strip() }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-4 text-md-end">
+        <div class="btn-group mb-2">
+            <a href="{{ url_for('edit_project', project_id=project.id) }}" class="btn ocean-button-sm">
+                <i class="fas fa-edit me-1 pulse-icon"></i>Edit Project
+            </a>
+            <button type="button" class="btn ocean-button-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ url_for('manage_collaborators', project_id=project.id) }}"><i class="fas fa-users me-2"></i>Manage Collaborators</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('export_project', project_id=project.id) }}"><i class="fas fa-file-export me-2"></i>Export Project</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteProjectModal">
+                        <i class="fas fa-trash-alt me-2"></i>Delete Project
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <a href="{{ url_for('upload_sample', project_id=project.id) }}" class="btn ocean-button ms-2 mb-2">
+            <i class="fas fa-upload me-1 pulse-icon"></i>Upload Sample
+        </a>
+    </div>
+</div>
+
+<!-- Project Tabs -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="ocean-card">
+            <ul class="nav nav-tabs" id="projectTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">
+                        <i class="fas fa-home me-1 pulse-icon"></i>Overview
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="samples-tab" data-bs-toggle="tab" data-bs-target="#samples" type="button" role="tab" aria-controls="samples" aria-selected="false">
+                        <i class="fas fa-flask me-1 pulse-icon"></i>Samples
+                        <span class="ocean-badge bg-primary rounded-pill ms-1">{{ project.samples|length }}</span>
+                    </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="analyses-tab" data-bs-toggle="tab" data-bs-target="#analyses" type="button" role="tab" aria-controls="analyses" aria-selected="false">
+                    <i class="fas fa-chart-bar me-1 pulse-icon"></i>Analyses
+                    <span class="ocean-badge bg-primary rounded-pill ms-1">{{ analyses|length }}</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="collaborators-tab" data-bs-toggle="tab" data-bs-target="#collaborators" type="button" role="tab" aria-controls="collaborators" aria-selected="false">
+                    <i class="fas fa-users me-1 pulse-icon"></i>Collaborators
+                    <span class="ocean-badge bg-primary rounded-pill ms-1">{{ project.collaborators|length }}</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="comments-tab" data-bs-toggle="tab" data-bs-target="#comments" type="button" role="tab" aria-controls="comments" aria-selected="false">
+                    <i class="fas fa-comments me-1 pulse-icon"></i>Comments
+                    <span class="ocean-badge bg-primary rounded-pill ms-1">{{ project.comments|length }}</span>
+                </button>
+            </li>
+        </ul>
+        </div>
+        
+        <div class="tab-content" id="projectTabsContent">
+            <!-- Overview Tab -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+                <div class="ocean-card">
+                    <div class="card-header bg-primary text-white">
+                        <i class="fas fa-info-circle me-2"></i>Project Overview
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Project Stats -->
+                            <div class="col-md-4 mb-4">
+                                <h5 class="mb-3 text-primary"><i class="fas fa-chart-line me-2"></i>Project Statistics</h5>
+                                <div class="row g-3">
+                                    <div class="col-6">
+                                        <div class="ocean-card h-100">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-flask fa-2x text-primary mb-2 pulse-icon"></i>
+                                                <h3 class="mb-0">{{ project.samples|length }}</h3>
+                                                <div class="small text-primary">Samples</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="ocean-card h-100">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-chart-bar fa-2x text-primary mb-2 pulse-icon"></i>
+                                                <h3 class="mb-0">{{ analyses|length }}</h3>
+                                                <div class="small text-primary">Analyses</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="ocean-card h-100">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-users fa-2x text-primary mb-2 pulse-icon"></i>
+                                                <h3 class="mb-0">{{ project.collaborators|length }}</h3>
+                                                <div class="small text-primary">Collaborators</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="ocean-card h-100">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-comments fa-2x text-primary mb-2 pulse-icon"></i>
+                                                <h3 class="mb-0">{{ comments|length }}</h3>
+                                                <div class="small text-primary">Comments</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Recent Activity -->
+                            <div class="col-md-8 mb-4">
+                                <h5 class="mb-3 text-primary"><i class="fas fa-history me-2"></i>Recent Activity</h5>
+                                {% if project_activity %}
+                                <div class="timeline ocean-card p-3">
+                                    {% for activity in project_activity[:5] %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker bg-primary text-white">
+                                            {% if activity.activity_type == 'sample_upload' %}
+                                            <i class="fas fa-upload pulse-icon"></i>
+                                            {% elif activity.activity_type == 'analysis_started' %}
+                                            <i class="fas fa-play pulse-icon"></i>
+                                            {% elif activity.activity_type == 'analysis_completed' %}
+                                            <i class="fas fa-check pulse-icon"></i>
+                                            {% elif activity.activity_type == 'collaborator_added' %}
+                                            <i class="fas fa-user-plus pulse-icon"></i>
+                                            {% elif activity.activity_type == 'comment_added' %}
+                                            <i class="fas fa-comment pulse-icon"></i>
+                                            {% else %}
+                                            <i class="fas fa-circle pulse-icon"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="timeline-content">
+                                            <p class="mb-1 text-primary">{{ activity.message }}</p>
+                                            <small class="text-muted">{{ activity.created_at.strftime('%Y-%m-%d %H:%M') }} by {{ activity.user.name }}</small>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="ocean-card p-3 text-center">
+                                    <i class="fas fa-info-circle me-2 text-primary pulse-icon"></i>No recent activity for this project.
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Taxonomic Summary -->
+                            <div class="col-md-6 mb-4">
+                                <h5 class="mb-3 text-primary"><i class="fas fa-dna me-2"></i>Taxonomic Summary</h5>
+                                {% if taxonomic_summary %}
+                                <div class="ocean-card">
+                                    <div class="card-header bg-primary text-white">
+                                        <i class="fas fa-chart-pie me-2"></i>Taxonomic Distribution
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="taxonomicSummaryChart" style="height: 300px;"></div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="ocean-card">
+                                    <div class="card-header bg-primary text-white">
+                                        <i class="fas fa-chart-pie me-2"></i>Taxonomic Distribution
+                                    </div>
+                                    <div class="card-body text-center py-4">
+                                        <i class="fas fa-chart-pie fa-3x text-primary mb-3 pulse-icon"></i>
+                                        <p class="text-primary">No taxonomic data available yet.</p>
+                                        <p class="small text-primary">Upload samples and run analyses to generate taxonomic data.</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Depth Distribution -->
+                            <div class="col-md-6 mb-4">
+                                <h5 class="mb-3 text-primary"><i class="fas fa-water me-2"></i>Depth Distribution</h5>
+                                {% if depth_distribution %}
+                                <div class="ocean-card">
+                                    <div class="card-header bg-primary text-white">
+                                        <i class="fas fa-chart-line me-2"></i>Depth Analysis
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="depthDistributionChart" style="height: 300px;"></div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="ocean-card">
+                                    <div class="card-header bg-primary text-white">
+                                        <i class="fas fa-chart-line me-2"></i>Depth Analysis
+                                    </div>
+                                    <div class="card-body text-center py-4">
+                                        <i class="fas fa-water fa-3x text-primary mb-3 pulse-icon"></i>
+                                        <p class="text-primary">No depth distribution data available yet.</p>
+                                        <p class="small text-primary">Add depth information to your samples to generate this chart.</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Samples Tab -->
+            <div class="tab-pane fade" id="samples" role="tabpanel" aria-labelledby="samples-tab">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Project Samples</h5>
+                        <a href="{{ url_for('upload_sample', project_id=project.id) }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-upload me-1"></i>Upload Sample
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if project.samples %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Sample Name</th>
+                                        <th>Collection Date</th>
+                                        <th>Depth (m)</th>
+                                        <th>File Size</th>
+                                        <th>Analyses</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for sample in project.samples %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('sample_detail', sample_id=sample.id) }}" class="text-decoration-none">
+                                                {{ sample.name }}
+                                            </a>
+                                        </td>
+                                        <td>{{ sample.collection_date.strftime('%Y-%m-%d') if sample.collection_date else 'N/A' }}</td>
+                                        <td>{{ sample.depth if sample.depth else 'N/A' }}</td>
+                                        <td>{{ sample.get_file_size_display() }}</td>
+                                        <td>{{ sample.analyses|length }}</td>
+                                        <td>
+                                            {% if sample.status == 'processed' %}
+                                            <span class="badge bg-success">Processed</span>
+                                            {% elif sample.status == 'processing' %}
+                                            <span class="badge bg-warning">Processing</span>
+                                            {% elif sample.status == 'error' %}
+                                            <span class="badge bg-danger">Error</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">Uploaded</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="sampleActionDropdown{{ sample.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Actions
+                                                </button>
+                                                <ul class="dropdown-menu" aria-labelledby="sampleActionDropdown{{ sample.id }}">
+                                                    <li><a class="dropdown-item" href="{{ url_for('sample_detail', sample_id=sample.id) }}"><i class="fas fa-eye me-2"></i>View Details</a></li>
+                                                    <li><a class="dropdown-item" href="{{ url_for('run_analysis', sample_id=sample.id) }}"><i class="fas fa-play me-2"></i>Run Analysis</a></li>
+                                                    <li><a class="dropdown-item" href="{{ url_for('edit_sample', sample_id=sample.id) }}"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                                                    <li><a class="dropdown-item" href="{{ url_for('download_sample', sample_id=sample.id) }}"><i class="fas fa-download me-2"></i>Download</a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteSampleModal{{ sample.id }}">
+                                                            <i class="fas fa-trash-alt me-2"></i>Delete
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <!-- Delete Sample Modal -->
+                                            <div class="modal fade" id="deleteSampleModal{{ sample.id }}" tabindex="-1" aria-labelledby="deleteSampleModalLabel{{ sample.id }}" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="deleteSampleModalLabel{{ sample.id }}">Delete Sample</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>Are you sure you want to delete the sample <strong>{{ sample.name }}</strong>?</p>
+                                                            <p class="text-danger">This action cannot be undone. All analyses and results associated with this sample will be permanently deleted.</p>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <form action="{{ url_for('delete_sample', sample_id=sample.id) }}" method="POST" class="d-inline">
+                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                <button type="submit" class="btn btn-danger">Delete Sample</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-flask fa-4x text-muted mb-3"></i>
+                            <h3>No samples yet</h3>
+                            <p class="text-muted">Upload your first sample to begin analysis.</p>
+                            <a href="{{ url_for('upload_sample', project_id=project.id) }}" class="btn btn-primary mt-3">
+                                <i class="fas fa-upload me-2"></i>Upload Sample
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analyses Tab -->
+            <div class="tab-pane fade" id="analyses" role="tabpanel" aria-labelledby="analyses-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Project Analyses</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if analyses %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Sample</th>
+                                        <th>Analysis Type</th>
+                                        <th>Started</th>
+                                        <th>Duration</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for analysis in analyses %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('sample_detail', sample_id=analysis.sample.id) }}" class="text-decoration-none">
+                                                {{ analysis.sample.name }}
+                                            </a>
+                                        </td>
+                                        <td>{{ analysis.analysis_type }}</td>
+                                        <td>{{ analysis.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>{{ analysis.get_duration_display() }}</td>
+                                        <td>
+                                            {% if analysis.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                            {% elif analysis.status == 'processing' %}
+                                            <span class="badge bg-warning">Processing</span>
+                                            {% elif analysis.status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">Pending</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{{ url_for('analysis_results', analysis_id=analysis.id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <a href="{{ url_for('download_analysis_report', analysis_id=analysis.id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li><a class="dropdown-item" href="{{ url_for('analysis_results', analysis_id=analysis.id) }}"><i class="fas fa-eye me-2"></i>View Results</a></li>
+                                                    <li><a class="dropdown-item" href="{{ url_for('download_analysis_report', analysis_id=analysis.id) }}"><i class="fas fa-download me-2"></i>Download Report</a></li>
+                                                    <li><a class="dropdown-item" href="{{ url_for('share_analysis', analysis_id=analysis.id) }}"><i class="fas fa-share-alt me-2"></i>Share</a></li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteAnalysisModal{{ analysis.id }}">
+                                                            <i class="fas fa-trash-alt me-2"></i>Delete
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <!-- Delete Analysis Modal -->
+                                            <div class="modal fade" id="deleteAnalysisModal{{ analysis.id }}" tabindex="-1" aria-labelledby="deleteAnalysisModalLabel{{ analysis.id }}" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="deleteAnalysisModalLabel{{ analysis.id }}">Delete Analysis</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>Are you sure you want to delete this analysis?</p>
+                                                            <p class="text-danger">This action cannot be undone. All results and reports associated with this analysis will be permanently deleted.</p>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <form action="{{ url_for('delete_analysis', analysis_id=analysis.id) }}" method="POST" class="d-inline">
+                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                <button type="submit" class="btn btn-danger">Delete Analysis</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-bar fa-4x text-muted mb-3"></i>
+                            <h3>No analyses yet</h3>
+                            <p class="text-muted">Upload samples and run analyses to see results here.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Collaborators Tab -->
+            <div class="tab-pane fade" id="collaborators" role="tabpanel" aria-labelledby="collaborators-tab">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Project Collaborators</h5>
+                        <a href="{{ url_for('manage_collaborators', project_id=project.id) }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus me-1"></i>Manage Collaborators
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if project.collaborators %}
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                            <!-- Project Owner -->
+                            <div class="col">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="avatar avatar-md me-3">
+                                                {% if project.user.profile_image %}
+                                                <img src="{{ project.user.profile_image }}" alt="{{ project.user.name }}">
+                                                {% else %}
+                                                <div class="avatar-initials">{{ project.user.name[:1] }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <h5 class="mb-0">{{ project.user.name }}</h5>
+                                                <span class="badge bg-primary">Owner</span>
+                                            </div>
+                                        </div>
+                                        <p class="small text-muted mb-2">{{ project.user.institution }}</p>
+                                        <p class="small text-muted mb-3">{{ project.user.email }}</p>
+                                        <a href="{{ url_for('researcher_profile', user_id=project.user.id) }}" class="btn btn-sm btn-outline-primary w-100">
+                                            <i class="fas fa-user me-1"></i>View Profile
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Collaborators -->
+                            {% for collaborator in project.collaborators %}
+                            <div class="col">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="avatar avatar-md me-3">
+                                                {% if collaborator.user.profile_image %}
+                                                <img src="{{ collaborator.user.profile_image }}" alt="{{ collaborator.user.name }}">
+                                                {% else %}
+                                                <div class="avatar-initials">{{ collaborator.user.name[:1] }}</div>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <h5 class="mb-0">{{ collaborator.user.name }}</h5>
+                                                <span class="badge bg-info">{{ collaborator.role }}</span>
+                                            </div>
+                                        </div>
+                                        <p class="small text-muted mb-2">{{ collaborator.user.institution }}</p>
+                                        <p class="small text-muted mb-3">{{ collaborator.user.email }}</p>
+                                        <div class="d-flex">
+                                            <a href="{{ url_for('researcher_profile', user_id=collaborator.user.id) }}" class="btn btn-sm btn-outline-primary flex-grow-1 me-2">
+                                                <i class="fas fa-user me-1"></i>View Profile
+                                            </a>
+                                            {% if current_user.id == project.user_id %}
+                                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#removeCollaboratorModal{{ collaborator.id }}">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                            
+                                            <!-- Remove Collaborator Modal -->
+                                            <div class="modal fade" id="removeCollaboratorModal{{ collaborator.id }}" tabindex="-1" aria-labelledby="removeCollaboratorModalLabel{{ collaborator.id }}" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="removeCollaboratorModalLabel{{ collaborator.id }}">Remove Collaborator</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>Are you sure you want to remove <strong>{{ collaborator.user.name }}</strong> from this project?</p>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <form action="{{ url_for('remove_collaborator', project_id=project.id, collaborator_id=collaborator.id) }}" method="POST" class="d-inline">
+                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                <button type="submit" class="btn btn-danger">Remove</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                            <h3>No collaborators yet</h3>
+                            <p class="text-muted">Invite researchers to collaborate on this project.</p>
+                            <a href="{{ url_for('manage_collaborators', project_id=project.id) }}" class="btn btn-primary mt-3">
+                                <i class="fas fa-user-plus me-2"></i>Add Collaborators
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Comments Tab -->
+            <div class="tab-pane fade" id="comments" role="tabpanel" aria-labelledby="comments-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Project Comments</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Comment Form -->
+                        <form method="POST" action="{{ url_for('add_project_comment', project_id=project.id) }}" class="mb-4">
+                            <div class="mb-3">
+                                <textarea name="content" class="form-control" rows="3" placeholder="Add a comment..."></textarea>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane me-1"></i>Post Comment
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <!-- Comments List -->
+                        {% if comments %}
+                        <div class="comments-list">
+                            {% for comment in comments %}
+                            <div class="comment-item">
+                                <div class="d-flex">
+                                    <div class="avatar avatar-sm me-3">
+                                        {% if comment.user.profile_image %}
+                                        <img src="{{ comment.user.profile_image }}" alt="{{ comment.user.name }}">
+                                        {% else %}
+                                        <div class="avatar-initials">{{ comment.user.name[:1] }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div>
+                                                <strong>{{ comment.user.name }}</strong>
+                                                {% if comment.user.id == project.user_id %}
+                                                <span class="badge bg-primary ms-1">Owner</span>
+                                                {% endif %}
+                                                <small class="text-muted ms-2">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                            </div>
+                                            {% if current_user.id == comment.user_id or current_user.id == project.user_id %}
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-link text-dark" type="button" id="commentActionDropdown{{ comment.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="commentActionDropdown{{ comment.id }}">
+                                                    {% if current_user.id == comment.user_id %}
+                                                    <li><a class="dropdown-item" href="{{ url_for('edit_comment', comment_id=comment.id) }}"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                                                    {% endif %}
+                                                    <li>
+                                                        <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteCommentModal{{ comment.id }}">
+                                                            <i class="fas fa-trash-alt me-2"></i>Delete
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            
+                                            <!-- Delete Comment Modal -->
+                                            <div class="modal fade" id="deleteCommentModal{{ comment.id }}" tabindex="-1" aria-labelledby="deleteCommentModalLabel{{ comment.id }}" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="deleteCommentModalLabel{{ comment.id }}">Delete Comment</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>Are you sure you want to delete this comment?</p>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <form action="{{ url_for('delete_comment', comment_id=comment.id) }}" method="POST" class="d-inline">
+                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="comment-content">
+                                            {{ comment.content|nl2br }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-comments fa-4x text-muted mb-3"></i>
+                            <h3>No comments yet</h3>
+                            <p class="text-muted">Be the first to comment on this project.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Project Modal -->
+<div class="modal fade" id="deleteProjectModal" tabindex="-1" aria-labelledby="deleteProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteProjectModalLabel">Delete Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the project <strong>{{ project.title }}</strong>?</p>
+                <p class="text-danger">This action cannot be undone. All samples, analyses, and results associated with this project will be permanently deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_project', project_id=project.id) }}" method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Delete Project</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+    
+    // Taxonomic Summary Chart
+    {% if taxonomic_summary %}
+    Plotly.newPlot('taxonomicSummaryChart', [{
+        values: {{ taxonomic_summary.values|tojson }},
+        labels: {{ taxonomic_summary.labels|tojson }},
+        type: 'pie',
+        hole: 0.4,
+        marker: {
+            colors: ['#3366cc', '#dc3545', '#ffc107', '#28a745', '#17a2b8', '#6610f2', '#fd7e14', '#20c997', '#e83e8c', '#6c757d']
+        }
+    }], {
+        margin: {t: 0, b: 0, l: 0, r: 0},
+        showlegend: true,
+        legend: {orientation: 'h', y: -0.2}
+    });
+    {% endif %}
+    
+    // Depth Distribution Chart
+    {% if depth_distribution %}
+    Plotly.newPlot('depthDistributionChart', [{
+        x: {{ depth_distribution.depths|tojson }},
+        y: {{ depth_distribution.counts|tojson }},
+        type: 'bar',
+        marker: {
+            color: '#3366cc'
+        }
+    }], {
+        margin: {t: 30, b: 40, l: 50, r: 0},
+        xaxis: {title: 'Depth (m)'},
+        yaxis: {title: 'Number of Samples'}
+    });
+    {% endif %}
+</script>
+
+<!-- Ocean Waves Animation -->
+<div class="ocean-waves mt-5">
+    <div class="wave"></div>
+    <div class="wave"></div>
+</div>
+
+<!-- Bubbles Animation -->
+<div class="bubbles">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+</div>
+{% endblock %}

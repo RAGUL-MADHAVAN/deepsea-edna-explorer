@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Edit Profile{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-12 mb-4 text-center">
+            <h2 class="text-primary"><i class="fas fa-user-edit me-2"></i>Edit Your Profile</h2>
+            <p class="text-muted">Update your researcher information and preferences</p>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card ocean-card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Edit Profile</h4>
+                </div>
+                <div class="card-body">
+                <form method="POST" action="{{ url_for('edit_profile') }}" enctype="multipart/form-data">
+                    <div class="row mb-4">
+                        <div class="col-md-4 text-center">
+                            <div class="avatar-container">
+                                <img src="{{ url_for('static', filename=user.profile_picture) if user.profile_picture else 'https://via.placeholder.com/150' }}" alt="Profile Picture" class="profile-picture mb-3 rounded-circle">
+                                <div class="avatar-ring"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="profile_picture" class="form-label text-primary">Change Profile Picture</label>
+                                <input class="form-control" type="file" id="profile_picture" name="profile_picture" accept="image/*">
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="name" class="form-label text-primary">Full Name</label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ user.name }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label text-primary">Email Address</label>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" readonly>
+                                <div class="form-text">Email address cannot be changed. Contact support if needed.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="username" class="form-label text-primary">Username</label>
+                                <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" readonly>
+                                <div class="form-text">Username cannot be changed.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="institution" class="form-label text-primary">Institution/Organization</label>
+                        <input type="text" class="form-control" id="institution" name="institution" value="{{ user.institution or '' }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="research_interests" class="form-label text-primary">Research Interests</label>
+                        <textarea class="form-control" id="research_interests" name="research_interests" rows="4">{{ user.research_interests or '' }}</textarea>
+                    </div>
+                    
+                    <hr class="my-4 ocean-divider">
+                    
+                    <h5 class="text-primary">Change Password</h5>
+                    <p class="text-muted">Leave blank if you don't want to change your password</p>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="current_password" class="form-label text-primary">Current Password</label>
+                            <input type="password" class="form-control" id="current_password" name="current_password">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="new_password" class="form-label text-primary">New Password</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="confirm_password" class="form-label text-primary">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4 ocean-divider">
+                    
+                    <h5 class="text-primary">Notification Preferences</h5>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="email_notifications" name="email_notifications" {% if user.email_notifications %}checked{% endif %}>
+                        <label class="form-check-label" for="email_notifications">Receive email notifications</label>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="collaboration_notifications" name="collaboration_notifications" {% if user.collaboration_notifications %}checked{% endif %}>
+                        <label class="form-check-label" for="collaboration_notifications">Notify me when I'm added to a project as a collaborator</label>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="analysis_notifications" name="analysis_notifications" {% if user.analysis_notifications %}checked{% endif %}>
+                        <label class="form-check-label" for="analysis_notifications">Notify me when my analyses are completed</label>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('profile') }}" class="btn btn-outline-secondary me-md-2"><i class="fas fa-times me-2"></i>Cancel</a>
+                        <button type="submit" class="btn ocean-button"><i class="fas fa-save me-2"></i>Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4 mb-4 ocean-card danger-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h5>
+            </div>
+            <div class="card-body">
+                <h6>Delete Account</h6>
+                <p>Once you delete your account, there is no going back. Please be certain.</p>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                    Delete My Account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAccountModalLabel">Confirm Account Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you absolutely sure you want to delete your account? This action cannot be undone and will result in the permanent loss of:</p>
+                <ul>
+                    <li>Your profile information</li>
+                    <li>All your projects and samples</li>
+                    <li>All your analysis results</li>
+                    <li>Your collaboration history</li>
+                </ul>
+                <div class="mb-3">
+                    <label for="delete_confirmation" class="form-label">Type "DELETE" to confirm</label>
+                    <input type="text" class="form-control" id="delete_confirmation" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>Delete Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ocean Wave Animation -->
+<div class="ocean-container">
+    <div class="wave"></div>
+    <div class="wave"></div>
+</div>
+
+<!-- Bubble Animation -->
+<div class="bubbles">
+    {% for i in range(15) %}
+    <div class="bubble"></div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Password validation
+    document.getElementById('new_password').addEventListener('input', function() {
+        const password = this.value;
+        if (password) {
+            const hasMinLength = password.length >= 8;
+            const hasLetter = /[a-zA-Z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasSymbol = /[^a-zA-Z0-9]/.test(password);
+            
+            if (hasMinLength && hasLetter && hasNumber && hasSymbol) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+            }
+        } else {
+            this.classList.remove('is-valid');
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    // Password confirmation validation
+    document.getElementById('confirm_password').addEventListener('input', function() {
+        const password = document.getElementById('new_password').value;
+        const confirmPassword = this.value;
+        
+        if (password && confirmPassword) {
+            if (password === confirmPassword) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+            }
+        } else {
+            this.classList.remove('is-valid');
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    // Delete account confirmation
+    document.getElementById('delete_confirmation').addEventListener('input', function() {
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        if (this.value === 'DELETE') {
+            confirmDeleteBtn.disabled = false;
+        } else {
+            confirmDeleteBtn.disabled = true;
+        }
+    });
+    
+    // Preview profile picture before upload
+    document.getElementById('profile_picture').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.querySelector('.profile-picture').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
+{% endblock %}

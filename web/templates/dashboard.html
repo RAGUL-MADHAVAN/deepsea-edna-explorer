@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-5">
+    <!-- Ocean-themed header with animated waves -->
+    <div class="ocean-header mb-5">
+        <div class="ocean-header-content">
+            <h1 class="display-4 fw-bold text-white"><i class="fas fa-water me-3"></i>DeepSea Explorer</h1>
+            <p class="lead text-white">Welcome, {{ current_user.name }}! Dive into your marine research dashboard</p>
+        </div>
+        <div class="wave-animation"></div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <h2 class="display-5 fw-bold text-primary"><i class="fas fa-tachometer-alt me-3"></i>Researcher Dashboard</h2>
+            <p class="lead">Your DeepSea eDNA Explorer dashboard provides an overview of your research activities.</p>
+            <div class="ocean-divider mx-auto mb-4"></div>
+        </div>
+    </div>
+    
+    <!-- Notification Center -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="notification-center">
+                {% if notifications %}
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="fas fa-bell me-2"></i><strong>Recent Updates:</strong> You have {{ notifications|length }} new notification(s)
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+<!-- Stats Overview with Ocean Theme -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card h-100 ocean-card">
+            <div class="card-body stat-card ocean-gradient-blue text-white">
+                <i class="fas fa-project-diagram fa-3x mb-3 pulse-icon"></i>
+                <div class="stat-value">{{ current_user.projects|length }}</div>
+                <div class="stat-label">Projects</div>
+                <div class="ocean-bubbles"></div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('projects') }}" class="btn btn-sm btn-light">View All</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 ocean-card">
+            <div class="card-body stat-card ocean-gradient-teal text-white">
+                <i class="fas fa-flask fa-3x mb-3 pulse-icon"></i>
+                <div class="stat-value">{{ current_user.get_total_samples() }}</div>
+                <div class="stat-label">Samples</div>
+                <div class="ocean-bubbles"></div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="#samples-section" class="btn btn-sm btn-light">View All</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 ocean-card">
+            <div class="card-body stat-card ocean-gradient-green text-white">
+                <i class="fas fa-chart-bar fa-3x mb-3 pulse-icon"></i>
+                <div class="stat-value">{{ current_user.get_total_analyses() }}</div>
+                <div class="stat-label">Analyses</div>
+                <div class="ocean-bubbles"></div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="#analyses-section" class="btn btn-sm btn-light">View All</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 ocean-card">
+            <div class="card-body stat-card ocean-gradient-dark text-white">
+                <i class="fas fa-users fa-3x mb-3 pulse-icon"></i>
+                <div class="stat-value">{{ current_user.collaborative_projects|length }}</div>
+                <div class="stat-label">Collaborations</div>
+                <div class="ocean-bubbles"></div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('collaborations') }}" class="btn btn-sm btn-light">View All</a>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Projects -->
+    <div class="col-md-6">
+        <div class="card mb-4 ocean-card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Recent Projects</h5>
+                <div>
+                    <a href="{{ url_for('new_project') }}" class="btn btn-sm ocean-button-sm me-2">
+                        <i class="fas fa-plus"></i> New Project
+                    </a>
+                    <a href="{{ url_for('projects') }}" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-list"></i> View All
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if recent_projects %}
+                <div class="list-group">
+                    {% for project in recent_projects %}
+                    <a href="{{ url_for('project_detail', project_id=project.id) }}" class="list-group-item list-group-item-action ocean-list-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1 text-primary">{{ project.title }}</h6>
+                            <small><i class="fas fa-calendar-alt me-1"></i>{{ project.updated_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        <p class="mb-1 text-truncate">{{ project.description }}</p>
+                        <small>
+                            <i class="fas fa-flask me-1 text-info"></i>{{ project.samples|length }} samples
+                            {% if project.is_public %}
+                            <span class="ms-2 badge bg-success"><i class="fas fa-globe me-1"></i>Public</span>
+                            {% else %}
+                            <span class="ms-2 badge bg-secondary"><i class="fas fa-lock me-1"></i>Private</span>
+                            {% endif %}
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-project-diagram fa-3x text-primary mb-3 pulse-icon"></i>
+                    <p>You don't have any projects yet.</p>
+                    <a href="{{ url_for('new_project') }}" class="btn ocean-button">
+                        <i class="fas fa-plus me-1"></i> Create Your First Project
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Notifications -->
+        <div class="card mb-4 ocean-card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Recent Notifications</h5>
+                <a href="{{ url_for('notifications') }}" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-list"></i> View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                    <a href="{{ notification.link }}" class="list-group-item list-group-item-action ocean-list-item {% if not notification.is_read %}border-start border-info border-5{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1 {% if not notification.is_read %}text-info{% endif %}">{{ notification.message }}</h6>
+                            <small><i class="fas fa-clock me-1"></i>{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        {% if not notification.is_read %}
+                        <span class="badge bg-info text-white">New</span>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <p class="text-center mb-0">No new notifications.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Analyses -->
+    <div class="col-md-6">
+        <div class="card mb-4 ocean-card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Recent Analyses</h5>
+                <a href="#" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-list"></i> View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_analyses %}
+                <div class="list-group">
+                    {% for analysis in recent_analyses %}
+                    <a href="{{ url_for('analysis_results', analysis_id=analysis.id) }}" class="list-group-item list-group-item-action ocean-list-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1 text-success">{{ analysis.sample.name }}</h6>
+                            <small><i class="fas fa-calendar-alt me-1"></i>{{ analysis.created_at.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        <p class="mb-1">
+                            <span class="badge bg-info text-white">{{ analysis.analysis_type }}</span>
+                            <span class="ms-2">
+                                {% if analysis.status == 'completed' %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Completed</span>
+                                {% elif analysis.status == 'processing' %}
+                                <span class="badge bg-warning text-dark"><i class="fas fa-spinner fa-spin me-1"></i>Processing</span>
+                                {% elif analysis.status == 'failed' %}
+                                <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Failed</span>
+                                {% else %}
+                                <span class="badge bg-secondary"><i class="fas fa-clock me-1"></i>Pending</span>
+                                {% endif %}
+                            </span>
+                        </p>
+                        <small>
+                            <i class="fas fa-project-diagram me-1 text-primary"></i>{{ analysis.sample.project.title }}
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-bar fa-3x text-success mb-3 pulse-icon"></i>
+                    <p>You haven't run any analyses yet.</p>
+                    <p class="small text-muted">Upload samples to your projects and start analyzing!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mb-4 ocean-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('new_project') }}" class="btn ocean-button d-block">
+                            <i class="fas fa-plus me-2"></i>New Project
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('projects') }}" class="btn btn-outline-primary d-block ocean-button-outline">
+                            <i class="fas fa-project-diagram me-2"></i>My Projects
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('ai_assistant') }}" class="btn btn-outline-primary d-block ocean-button-outline">
+                            <i class="fas fa-robot me-2"></i>AI Assistant
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('profile') }}" class="btn btn-outline-primary d-block ocean-button-outline">
+                            <i class="fas fa-user me-2"></i>My Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Badges Progress -->
+        <div class="card mb-4 ocean-card">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-award me-2"></i>Badges Progress</h5>
+                <a href="{{ url_for('badges') }}" class="btn btn-sm btn-outline-light ocean-button-sm">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if current_user.badges %}
+                <div class="row">
+                    {% for user_badge in current_user.badges[:6] %}
+                    <div class="col-md-4 col-6 text-center mb-3">
+                        <div class="badge-icon ocean-badge">
+                            <i class="{{ user_badge.badge.icon }} fa-2x text-primary"></i>
+                        </div>
+                        <div class="badge-name small mt-1 text-primary">{{ user_badge.badge.name }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <p class="mb-0">Complete analyses to earn badges!</p>
+                    <div class="progress mt-3" style="height: 10px; border-radius: 5px; overflow: hidden;">
+                        <div class="progress-bar bg-primary progress-bar-animated progress-bar-striped" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Featured Content -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card ocean-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-star me-2"></i>Featured Resources</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <div class="card h-100 ocean-card">
+                            <img src="https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Tutorial">
+                            <div class="card-body">
+                                <h5 class="card-title text-primary">Getting Started Tutorial</h5>
+                                <p class="card-text">Learn how to use DeepSea eDNA Explorer for your research.</p>
+                                <a href="#" class="btn btn-sm ocean-button-sm">View Tutorial</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <div class="card h-100 ocean-card">
+                            <img src="https://images.unsplash.com/photo-1581093196277-9f608bb3d4b9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Webinar">
+                            <div class="card-body">
+                                <h5 class="card-title text-primary">Upcoming Webinar</h5>
+                                <p class="card-text">Join our webinar on advanced eDNA analysis techniques.</p>
+                                <a href="#" class="btn btn-sm ocean-button-sm">Register Now</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100 ocean-card">
+                            <img src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Publication">
+                            <div class="card-body">
+                                <h5 class="card-title text-primary">Latest Research</h5>
+                                <p class="card-text">Read the latest publications using our platform.</p>
+                                <a href="#" class="btn btn-sm ocean-button-sm">Explore Research</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add any dashboard-specific JavaScript here
+</script>
+{% endblock %}
+
+<!-- Ocean Waves Animation -->
+<div class="ocean-waves">
+    <div class="wave wave1"></div>
+    <div class="wave wave2"></div>
+    <div class="wave wave3"></div>
+</div>
+
+<!-- Ocean Bubbles Animation -->
+<div class="bubbles">
+    {% for i in range(10) %}
+    <div class="bubble" style="--size: {{ range(1, 5) | random }}rem; --delay: {{ range(1, 8) | random }}s; --position: {{ range(1, 99) | random }}%;"></div>
+    {% endfor %}
+</div>

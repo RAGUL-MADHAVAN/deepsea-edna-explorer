@@ -1,0 +1,1483 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Visualizations{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder me-1"></i>{{ project.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-chart-bar me-1"></i>Visualizations</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="display-5 fw-bold text-primary"><i class="fas fa-chart-network me-2"></i>Interactive Visualizations</h1>
+        <p class="lead">Explore your eDNA data through interactive visualizations and comparative analysis.</p>
+        <div class="ocean-divider mb-4"></div>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <div class="btn-group">
+            <button type="button" class="btn ocean-button" data-bs-toggle="modal" data-bs-target="#createVisualizationModal">
+                <i class="fas fa-plus me-1"></i>New Visualization
+            </button>
+            <button type="button" class="btn ocean-button dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#importVisualizationModal">
+                    <i class="fas fa-file-import me-2 text-primary"></i>Import Visualization
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('visualization_templates') }}">
+                    <i class="fas fa-clipboard-list me-2 text-primary"></i>Templates
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Visualization Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card ocean-card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-filter me-2"></i>Visualization Filters</h4>
+            </div>
+            <div class="card-body">
+                <form id="visualizationFilters" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="sampleSelect" class="form-label">Samples</label>
+                        <select class="form-select" id="sampleSelect" multiple>
+                            {% for sample in samples %}
+                            <option value="{{ sample.id }}">{{ sample.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="analysisSelect" class="form-label">Analyses</label>
+                        <select class="form-select" id="analysisSelect" multiple>
+                            {% for analysis in analyses %}
+                            <option value="{{ analysis.id }}">{{ analysis.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="taxonomicLevelSelect" class="form-label">Taxonomic Level</label>
+                        <select class="form-select" id="taxonomicLevelSelect">
+                            <option value="phylum">Phylum</option>
+                            <option value="class">Class</option>
+                            <option value="order">Order</option>
+                            <option value="family">Family</option>
+                            <option value="genus">Genus</option>
+                            <option value="species">Species</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="abundanceThreshold" class="form-label">Min. Abundance (%)</label>
+                        <input type="range" class="form-range" id="abundanceThreshold" min="0" max="5" step="0.1" value="0.5">
+                        <div class="d-flex justify-content-between">
+                            <span>0%</span>
+                            <span id="abundanceThresholdValue">0.5%</span>
+                            <span>5%</span>
+                        </div>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="button" class="btn btn-outline-secondary" id="resetFilters">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </button>
+                        <button type="button" class="btn ocean-button" id="applyFilters">
+                            <i class="fas fa-filter me-1"></i>Apply Filters
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Visualization Results -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card ocean-card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Visualization Results</h4>
+                <div>
+                    <button class="btn btn-sm btn-light me-2" id="downloadData">
+                        <i class="fas fa-download me-1"></i>Download Data
+                    </button>
+                    <button class="btn btn-sm btn-light" id="shareVisualization">
+                        <i class="fas fa-share-alt me-1"></i>Share
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="visualization-container" style="height: 500px; position: relative;">
+                            <div class="ocean-bubbles"></div>
+                            <div id="mainVisualization" style="width: 100%; height: 100%;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Analysis Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span><i class="fas fa-vial text-primary me-2"></i>Samples:</span>
+                                        <span class="badge bg-primary rounded-pill">3</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span><i class="fas fa-dna text-primary me-2"></i>Total Reads:</span>
+                                        <span>1,245,678</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span><i class="fas fa-fish text-primary me-2"></i>Species Detected:</span>
+                                        <span>42</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span><i class="fas fa-calendar-alt text-primary me-2"></i>Analysis Date:</span>
+                                        <span>{{ analysis.created_at|date }}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Visualization Options</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Chart Type</label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" class="btn-check" name="chartType" id="chartBar" autocomplete="off" checked>
+                                        <label class="btn btn-outline-primary" for="chartBar"><i class="fas fa-chart-bar me-1"></i>Bar</label>
+                                        
+                                        <input type="radio" class="btn-check" name="chartType" id="chartPie" autocomplete="off">
+                                        <label class="btn btn-outline-primary" for="chartPie"><i class="fas fa-chart-pie me-1"></i>Pie</label>
+                                        
+                                        <input type="radio" class="btn-check" name="chartType" id="chartTree" autocomplete="off">
+                                        <label class="btn btn-outline-primary" for="chartTree"><i class="fas fa-sitemap me-1"></i>Tree</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Color Scheme</label>
+                                    <select class="form-select ocean-input">
+                                        <option value="ocean">Ocean</option>
+                                        <option value="coral">Coral Reef</option>
+                                        <option value="deep">Deep Sea</option>
+                                        <option value="coastal">Coastal</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="showLegend" checked>
+                                    <label class="form-check-label" for="showLegend">Show Legend</label>
+                                </div>
+                                
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="showLabels" checked>
+                                    <label class="form-check-label" for="showLabels">Show Labels</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Visualization Cards -->
+<div class="row mb-4">
+    <div class="col-12 mb-3">
+        <h3 class="text-primary"><i class="fas fa-bookmark me-2"></i>Saved Visualizations</h3>
+        <div class="ocean-divider mb-3"></div>
+    </div>
+    
+    {% for i in range(3) %}
+    <div class="col-md-4 mb-4">
+        <div class="card ocean-card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">{{ ['Species Abundance', 'Taxonomic Distribution', 'Temporal Trends'][i] }}</h5>
+            </div>
+            <div class="visualization-thumbnail position-relative" style="height: 180px; overflow: hidden;">
+                <div class="ocean-bubbles-sm"></div>
+                <img src="{{ url_for('static', filename='img/visualization_' ~ (i+1) ~ '.jpg') }}" class="img-fluid w-100" alt="Visualization thumbnail">
+            </div>
+            <div class="card-body">
+                <p class="card-text">{{ ['Analysis of species abundance across multiple samples', 'Taxonomic breakdown of marine organisms', 'Changes in biodiversity over time'][i] }}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted"><i class="fas fa-calendar-alt me-1"></i>Created {{ ['2 days ago', '1 week ago', '3 weeks ago'][i] }}</small>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye me-1"></i>View
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-edit me-1"></i>Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Visualization Tabs -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="visualizationTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="taxonomy-tab" data-bs-toggle="tab" data-bs-target="#taxonomy" type="button" role="tab" aria-controls="taxonomy" aria-selected="true">
+                            <i class="fas fa-sitemap me-1"></i>Taxonomy
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="abundance-tab" data-bs-toggle="tab" data-bs-target="#abundance" type="button" role="tab" aria-controls="abundance" aria-selected="false">
+                            <i class="fas fa-chart-bar me-1"></i>Abundance
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison" type="button" role="tab" aria-controls="comparison" aria-selected="false">
+                            <i class="fas fa-balance-scale me-1"></i>Comparison
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="depth-tab" data-bs-toggle="tab" data-bs-target="#depth" type="button" role="tab" aria-controls="depth" aria-selected="false">
+                            <i class="fas fa-water me-1"></i>Depth Analysis
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="diversity-tab" data-bs-toggle="tab" data-bs-target="#diversity" type="button" role="tab" aria-controls="diversity" aria-selected="false">
+                            <i class="fas fa-project-diagram me-1"></i>Diversity
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="custom-tab" data-bs-toggle="tab" data-bs-target="#custom" type="button" role="tab" aria-controls="custom" aria-selected="false">
+                            <i class="fas fa-chart-line me-1"></i>Custom
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="visualizationTabsContent">
+                    <!-- Taxonomy Tab -->
+                    <div class="tab-pane fade show active" id="taxonomy" role="tabpanel" aria-labelledby="taxonomy-tab">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="card-title mb-0">Taxonomic Classification</h5>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary active" id="sunburstViewBtn">
+                                            <i class="fas fa-chart-pie me-1"></i>Sunburst
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="treeViewBtn">
+                                            <i class="fas fa-sitemap me-1"></i>Tree
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="sankeyViewBtn">
+                                            <i class="fas fa-random me-1"></i>Sankey
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="taxonomySunburstChart" style="height: 600px;"></div>
+                                <div id="taxonomyTreeChart" style="height: 600px; display: none;"></div>
+                                <div id="taxonomySankeyChart" style="height: 600px; display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Abundance Tab -->
+                    <div class="tab-pane fade" id="abundance" role="tabpanel" aria-labelledby="abundance-tab">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="card-title mb-0">Relative Abundance</h5>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary active" id="barViewBtn">
+                                            <i class="fas fa-chart-bar me-1"></i>Bar
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="heatmapViewBtn">
+                                            <i class="fas fa-th me-1"></i>Heatmap
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="bubbleViewBtn">
+                                            <i class="fas fa-circle me-1"></i>Bubble
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="abundanceBarChart" style="height: 600px;"></div>
+                                <div id="abundanceHeatmapChart" style="height: 600px; display: none;"></div>
+                                <div id="abundanceBubbleChart" style="height: 600px; display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Comparison Tab -->
+                    <div class="tab-pane fade" id="comparison" role="tabpanel" aria-labelledby="comparison-tab">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="card-title mb-0">Sample Comparison</h5>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary active" id="stackedBarViewBtn">
+                                            <i class="fas fa-layer-group me-1"></i>Stacked Bar
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="pcaViewBtn">
+                                            <i class="fas fa-braille me-1"></i>PCA
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="nmdsViewBtn">
+                                            <i class="fas fa-project-diagram me-1"></i>NMDS
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="comparisonStackedBarChart" style="height: 600px;"></div>
+                                <div id="comparisonPCAChart" style="height: 600px; display: none;"></div>
+                                <div id="comparisonNMDSChart" style="height: 600px; display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Depth Analysis Tab -->
+                    <div class="tab-pane fade" id="depth" role="tabpanel" aria-labelledby="depth-tab">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="card-title mb-0">Depth Distribution</h5>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary active" id="lineViewBtn">
+                                            <i class="fas fa-chart-line me-1"></i>Line
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="contourViewBtn">
+                                            <i class="fas fa-map me-1"></i>Contour
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="depthLineChart" style="height: 600px;"></div>
+                                <div id="depthContourChart" style="height: 600px; display: none;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Diversity Tab -->
+                    <div class="tab-pane fade" id="diversity" role="tabpanel" aria-labelledby="diversity-tab">
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="card-title mb-0">Diversity Metrics Comparison</h5>
+                                            <select class="form-select form-select-sm" id="diversityMetricSelect" style="width: auto;">
+                                                <option value="shannon">Shannon Diversity Index</option>
+                                                <option value="simpson">Simpson Diversity Index</option>
+                                                <option value="chao1">Chao1 Richness Estimator</option>
+                                                <option value="evenness">Pielou's Evenness</option>
+                                            </select>
+                                        </div>
+                                        <div id="diversityComparisonChart" style="height: 400px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Diversity Analysis</h5>
+                                        <div class="mb-3">
+                                            <label for="rarefactionSampleSelect" class="form-label">Sample</label>
+                                            <select class="form-select" id="rarefactionSampleSelect">
+                                                {% for sample in samples %}
+                                                <option value="{{ sample.id }}">{{ sample.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div id="rarefactionCurveChart" style="height: 200px;"></div>
+                                        <hr>
+                                        <h6 class="card-subtitle mb-2">Interpretation</h6>
+                                        <div id="diversityInterpretation" class="small">
+                                            <p>The rarefaction curve shows the number of observed species as a function of sampling effort. The curve begins to plateau, indicating that the sampling depth is sufficient to capture most of the diversity in this sample.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Alpha Diversity Metrics</h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-hover table-striped mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Sample</th>
+                                                        <th>Shannon Index</th>
+                                                        <th>Simpson Index</th>
+                                                        <th>Chao1 Richness</th>
+                                                        <th>Pielou's Evenness</th>
+                                                        <th>Observed Taxa</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for sample in samples %}
+                                                    <tr>
+                                                        <td>{{ sample.name }}</td>
+                                                        <td>{{ sample.diversity_metrics.shannon|round(2) }}</td>
+                                                        <td>{{ sample.diversity_metrics.simpson|round(2) }}</td>
+                                                        <td>{{ sample.diversity_metrics.chao1|round(2) }}</td>
+                                                        <td>{{ sample.diversity_metrics.evenness|round(2) }}</td>
+                                                        <td>{{ sample.diversity_metrics.observed_taxa }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Custom Tab -->
+                    <div class="tab-pane fade" id="custom" role="tabpanel" aria-labelledby="custom-tab">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Custom Visualization</h5>
+                                        <p>Create your own custom visualization by selecting data sources, chart type, and parameters.</p>
+                                        
+                                        <form id="customVisualizationForm" class="row g-3">
+                                            <div class="col-md-4">
+                                                <label for="customChartType" class="form-label">Chart Type</label>
+                                                <select class="form-select" id="customChartType">
+                                                    <option value="bar">Bar Chart</option>
+                                                    <option value="line">Line Chart</option>
+                                                    <option value="scatter">Scatter Plot</option>
+                                                    <option value="pie">Pie Chart</option>
+                                                    <option value="heatmap">Heatmap</option>
+                                                    <option value="box">Box Plot</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="col-md-4">
+                                                <label for="customDataSource" class="form-label">Data Source</label>
+                                                <select class="form-select" id="customDataSource">
+                                                    <option value="taxonomy">Taxonomic Classification</option>
+                                                    <option value="abundance">Abundance Data</option>
+                                                    <option value="depth">Depth Distribution</option>
+                                                    <option value="diversity">Diversity Metrics</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="col-md-4">
+                                                <label for="customColorScheme" class="form-label">Color Scheme</label>
+                                                <select class="form-select" id="customColorScheme">
+                                                    <option value="viridis">Viridis</option>
+                                                    <option value="plasma">Plasma</option>
+                                                    <option value="inferno">Inferno</option>
+                                                    <option value="magma">Magma</option>
+                                                    <option value="cividis">Cividis</option>
+                                                    <option value="rainbow">Rainbow</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="col-md-6">
+                                                <label for="customXAxis" class="form-label">X-Axis</label>
+                                                <select class="form-select" id="customXAxis">
+                                                    <option value="taxon">Taxon</option>
+                                                    <option value="sample">Sample</option>
+                                                    <option value="depth">Depth</option>
+                                                    <option value="time">Time</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="col-md-6">
+                                                <label for="customYAxis" class="form-label">Y-Axis</label>
+                                                <select class="form-select" id="customYAxis">
+                                                    <option value="abundance">Abundance</option>
+                                                    <option value="count">Count</option>
+                                                    <option value="diversity">Diversity</option>
+                                                    <option value="richness">Richness</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="col-12 text-end">
+                                                <button type="button" class="btn btn-outline-secondary" id="resetCustom">
+                                                    <i class="fas fa-undo me-1"></i>Reset
+                                                </button>
+                                                <button type="button" class="btn btn-primary" id="generateCustom">
+                                                    <i class="fas fa-chart-line me-1"></i>Generate Visualization
+                                                </button>
+                                            </div>
+                                        </form>
+                                        
+                                        <div id="customVisualizationChart" style="height: 500px; margin-top: 20px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Visualization Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <button type="button" class="btn btn-outline-primary me-2" id="saveVisualizationBtn">
+                            <i class="fas fa-save me-1"></i>Save Visualization
+                        </button>
+                        <button type="button" class="btn btn-outline-primary me-2" id="exportImageBtn">
+                            <i class="fas fa-file-image me-1"></i>Export as Image
+                        </button>
+                        <button type="button" class="btn btn-outline-primary me-2" id="exportDataBtn">
+                            <i class="fas fa-file-csv me-1"></i>Export Data
+                        </button>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary" id="addToReportBtn">
+                            <i class="fas fa-file-alt me-1"></i>Add to Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Saved Visualizations -->
+<div class="row">
+    <div class="col-12">
+        <h2 class="h4 mb-3">Saved Visualizations</h2>
+    </div>
+    
+    {% if saved_visualizations %}
+    {% for viz in saved_visualizations %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ viz.name }}</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-link text-dark" type="button" id="vizDropdown{{ viz.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="vizDropdown{{ viz.id }}">
+                        <li><a class="dropdown-item" href="{{ url_for('edit_visualization', viz_id=viz.id) }}">
+                            <i class="fas fa-edit me-2"></i>Edit
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('duplicate_visualization', viz_id=viz.id) }}">
+                            <i class="fas fa-copy me-2"></i>Duplicate
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('share_visualization', viz_id=viz.id) }}">
+                            <i class="fas fa-share-alt me-2"></i>Share
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteVisualizationModal{{ viz.id }}">
+                            <i class="fas fa-trash-alt me-2"></i>Delete
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="viz-thumbnail mb-3" style="height: 150px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                    <img src="{{ viz.thumbnail_url }}" alt="{{ viz.name }}" style="max-width: 100%; max-height: 100%;">
+                </div>
+                <p class="card-text small">{{ viz.description|truncate(100) }}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">Created: {{ viz.created_at|datetimeformat }}</div>
+                    <div>
+                        <span class="badge bg-primary">{{ viz.type }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{{ url_for('view_visualization', viz_id=viz.id) }}" class="btn btn-sm btn-primary w-100">
+                    <i class="fas fa-eye me-1"></i>View
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete Visualization Modal -->
+    <div class="modal fade" id="deleteVisualizationModal{{ viz.id }}" tabindex="-1" aria-labelledby="deleteVisualizationModalLabel{{ viz.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteVisualizationModalLabel{{ viz.id }}">Delete Visualization</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the visualization <strong>{{ viz.name }}</strong>?</p>
+                    <p class="text-danger">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="POST" action="{{ url_for('delete_visualization', viz_id=viz.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger">Delete Visualization</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>No saved visualizations yet. Create and save visualizations to see them here.
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Create Visualization Modal -->
+<div class="modal fade" id="createVisualizationModal" tabindex="-1" aria-labelledby="createVisualizationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createVisualizationModalLabel">Create New Visualization</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createVisualizationForm">
+                    <div class="mb-3">
+                        <label for="vizName" class="form-label">Visualization Name</label>
+                        <input type="text" class="form-control" id="vizName" placeholder="Enter a name for your visualization">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="vizDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="vizDescription" rows="3" placeholder="Describe what this visualization shows"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="vizType" class="form-label">Visualization Type</label>
+                        <select class="form-select" id="vizType">
+                            <option value="taxonomy">Taxonomy</option>
+                            <option value="abundance">Abundance</option>
+                            <option value="comparison">Comparison</option>
+                            <option value="depth">Depth Analysis</option>
+                            <option value="diversity">Diversity</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="vizSamples" class="form-label">Samples</label>
+                        <select class="form-select" id="vizSamples" multiple>
+                            {% for sample in samples %}
+                            <option value="{{ sample.id }}">{{ sample.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select one or more samples to include in this visualization.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="vizAnalyses" class="form-label">Analyses</label>
+                        <select class="form-select" id="vizAnalyses" multiple>
+                            {% for analysis in analyses %}
+                            <option value="{{ analysis.id }}">{{ analysis.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select one or more analyses to include in this visualization.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="vizPublic">
+                            <label class="form-check-label" for="vizPublic">
+                                Make this visualization public
+                            </label>
+                            <div class="form-text">Public visualizations can be viewed by anyone with the link.</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="createVisualizationBtn">Create Visualization</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Visualization Modal -->
+<div class="modal fade" id="importVisualizationModal" tabindex="-1" aria-labelledby="importVisualizationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importVisualizationModalLabel">Import Visualization</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="importVisualizationForm">
+                    <div class="mb-3">
+                        <label for="importFile" class="form-label">Visualization File</label>
+                        <input class="form-control" type="file" id="importFile" accept=".json">
+                        <div class="form-text">Import a previously exported visualization file (.json format).</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="importName" class="form-label">Visualization Name</label>
+                        <input type="text" class="form-control" id="importName" placeholder="Enter a name for the imported visualization">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="importOverwrite">
+                            <label class="form-check-label" for="importOverwrite">
+                                Overwrite if visualization with same name exists
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="importVisualizationBtn">Import</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-2.14.0.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update abundance threshold value display
+        document.getElementById('abundanceThreshold').addEventListener('input', function() {
+            document.getElementById('abundanceThresholdValue').textContent = this.value + '%';
+        });
+        
+        // Taxonomy Sunburst Chart
+        const taxonomySunburstData = [
+            {
+                type: 'sunburst',
+                labels: {{ taxonomy_sunburst.labels|tojson }},
+                parents: {{ taxonomy_sunburst.parents|tojson }},
+                values: {{ taxonomy_sunburst.values|tojson }},
+                branchvalues: 'total',
+                textinfo: 'label+percent entry',
+                maxdepth: 3
+            }
+        ];
+        
+        const taxonomySunburstLayout = {
+            margin: { t: 10, b: 10, l: 10, r: 10 },
+            sunburstcolorway: ['#636efa', '#ef553b', '#00cc96', '#ab63fa', '#19d3f3', '#e763fa', '#fecb52', '#ffa15a', '#ff6692', '#b6e880'],
+            height: 600
+        };
+        
+        Plotly.newPlot('taxonomySunburstChart', taxonomySunburstData, taxonomySunburstLayout, {responsive: true});
+        
+        // Taxonomy Tree Chart
+        const taxonomyTreeData = [
+            {
+                type: 'treemap',
+                labels: {{ taxonomy_sunburst.labels|tojson }},
+                parents: {{ taxonomy_sunburst.parents|tojson }},
+                values: {{ taxonomy_sunburst.values|tojson }},
+                textinfo: 'label+value+percent entry',
+                marker: {
+                    colorscale: 'Viridis'
+                }
+            }
+        ];
+        
+        const taxonomyTreeLayout = {
+            margin: { t: 0, b: 0, l: 0, r: 0 },
+            height: 600
+        };
+        
+        Plotly.newPlot('taxonomyTreeChart', taxonomyTreeData, taxonomyTreeLayout, {responsive: true});
+        
+        // Taxonomy Sankey Chart
+        const taxonomySankeyData = [
+            {
+                type: 'sankey',
+                node: {
+                    pad: 15,
+                    thickness: 20,
+                    line: {
+                        color: 'black',
+                        width: 0.5
+                    },
+                    label: {{ taxonomy_sankey.nodes|tojson }},
+                    color: 'blue'
+                },
+                link: {
+                    source: {{ taxonomy_sankey.source|tojson }},
+                    target: {{ taxonomy_sankey.target|tojson }},
+                    value: {{ taxonomy_sankey.value|tojson }}
+                }
+            }
+        ];
+        
+        const taxonomySankeyLayout = {
+            title: {
+                text: 'Taxonomic Hierarchy Flow',
+                font: {
+                    size: 16
+                }
+            },
+            font: {
+                size: 10
+            },
+            margin: { t: 40, b: 10, l: 10, r: 10 },
+            height: 600
+        };
+        
+        Plotly.newPlot('taxonomySankeyChart', taxonomySankeyData, taxonomySankeyLayout, {responsive: true});
+        
+        // Toggle between Taxonomy visualization types
+        document.getElementById('sunburstViewBtn').addEventListener('click', function() {
+            document.getElementById('taxonomySunburstChart').style.display = 'block';
+            document.getElementById('taxonomyTreeChart').style.display = 'none';
+            document.getElementById('taxonomySankeyChart').style.display = 'none';
+            document.getElementById('sunburstViewBtn').classList.add('active');
+            document.getElementById('treeViewBtn').classList.remove('active');
+            document.getElementById('sankeyViewBtn').classList.remove('active');
+        });
+        
+        document.getElementById('treeViewBtn').addEventListener('click', function() {
+            document.getElementById('taxonomySunburstChart').style.display = 'none';
+            document.getElementById('taxonomyTreeChart').style.display = 'block';
+            document.getElementById('taxonomySankeyChart').style.display = 'none';
+            document.getElementById('sunburstViewBtn').classList.remove('active');
+            document.getElementById('treeViewBtn').classList.add('active');
+            document.getElementById('sankeyViewBtn').classList.remove('active');
+        });
+        
+        document.getElementById('sankeyViewBtn').addEventListener('click', function() {
+            document.getElementById('taxonomySunburstChart').style.display = 'none';
+            document.getElementById('taxonomyTreeChart').style.display = 'none';
+            document.getElementById('taxonomySankeyChart').style.display = 'block';
+            document.getElementById('sunburstViewBtn').classList.remove('active');
+            document.getElementById('treeViewBtn').classList.remove('active');
+            document.getElementById('sankeyViewBtn').classList.add('active');
+        });
+        
+        // Abundance Bar Chart
+        const abundanceBarData = [
+            {
+                x: {{ abundance_data.taxa|tojson }},
+                y: {{ abundance_data.values|tojson }},
+                type: 'bar',
+                marker: {
+                    color: 'rgba(55, 128, 191, 0.7)',
+                    line: {
+                        color: 'rgba(55, 128, 191, 1.0)',
+                        width: 1
+                    }
+                }
+            }
+        ];
+        
+        const abundanceBarLayout = {
+            margin: { t: 10, b: 120, l: 60, r: 10 },
+            yaxis: {
+                title: 'Relative Abundance (%)'
+            },
+            xaxis: {
+                tickangle: -45
+            },
+            height: 600
+        };
+        
+        Plotly.newPlot('abundanceBarChart', abundanceBarData, abundanceBarLayout, {responsive: true});
+        
+        // Abundance Heatmap Chart
+        const abundanceHeatmapData = [
+            {
+                z: {{ abundance_heatmap.z|tojson }},
+                x: {{ abundance_heatmap.x|tojson }},
+                y: {{ abundance_heatmap.y|tojson }},
+                type: 'heatmap',
+                colorscale: 'Viridis',
+                showscale: true,
+                colorbar: {
+                    title: 'Abundance (%)',
+                    titleside: 'right'
+                }
+            }
+        ];
+        
+        const abundanceHeatmapLayout = {
+            margin: { t: 10, b: 120, l: 120, r: 80 },
+            xaxis: {
+                tickangle: -45
+            },
+            height: 600
+        };
+        
+        Plotly.newPlot('abundanceHeatmapChart', abundanceHeatmapData, abundanceHeatmapLayout, {responsive: true});
+        
+        // Abundance Bubble Chart
+        const abundanceBubbleData = [
+            {
+                x: {{ abundance_bubble.x|tojson }},
+                y: {{ abundance_bubble.y|tojson }},
+                mode: 'markers',
+                marker: {
+                    size: {{ abundance_bubble.size|tojson }},
+                    color: {{ abundance_bubble.color|tojson }},
+                    colorscale: 'Viridis',
+                    showscale: true,
+                    colorbar: {
+                        title: 'Abundance (%)',
+                        titleside: 'right'
+                    }
+                },
+                text: {{ abundance_bubble.text|tojson }},
+                hoverinfo: 'text'
+            }
+        ];
+        
+        const abundanceBubbleLayout = {
+            margin: { t: 10, b: 60, l: 60, r: 80 },
+            xaxis: {
+                title: 'Sample'
+            },
+            yaxis: {
+                title: 'Taxon'
+            },
+            height: 600
+        };
+        
+        Plotly.newPlot('abundanceBubbleChart', abundanceBubbleData, abundanceBubbleLayout, {responsive: true});
+        
+        // Toggle between Abundance visualization types
+        document.getElementById('barViewBtn').addEventListener('click', function() {
+            document.getElementById('abundanceBarChart').style.display = 'block';
+            document.getElementById('abundanceHeatmapChart').style.display = 'none';
+            document.getElementById('abundanceBubbleChart').style.display = 'none';
+            document.getElementById('barViewBtn').classList.add('active');
+            document.getElementById('heatmapViewBtn').classList.remove('active');
+            document.getElementById('bubbleViewBtn').classList.remove('active');
+        });
+        
+        document.getElementById('heatmapViewBtn').addEventListener('click', function() {
+            document.getElementById('abundanceBarChart').style.display = 'none';
+            document.getElementById('abundanceHeatmapChart').style.display = 'block';
+            document.getElementById('abundanceBubbleChart').style.display = 'none';
+            document.getElementById('barViewBtn').classList.remove('active');
+            document.getElementById('heatmapViewBtn').classList.add('active');
+            document.getElementById('bubbleViewBtn').classList.remove('active');
+        });
+        
+        document.getElementById('bubbleViewBtn').addEventListener('click', function() {
+            document.getElementById('abundanceBarChart').style.display = 'none';
+            document.getElementById('abundanceHeatmapChart').style.display = 'none';
+            document.getElementById('abundanceBubbleChart').style.display = 'block';
+            document.getElementById('barViewBtn').classList.remove('active');
+            document.getElementById('heatmapViewBtn').classList.remove('active');
+            document.getElementById('bubbleViewBtn').classList.add('active');
+        });
+        
+        // Comparison Stacked Bar Chart
+        const comparisonStackedBarData = {{ comparison_stacked_bar|tojson }};
+        
+        const comparisonStackedBarLayout = {
+            barmode: 'stack',
+            margin: { t: 10, b: 120, l: 60, r: 10 },
+            legend: {
+                orientation: 'h',
+                y: -0.2
+            },
+            xaxis: {
+                tickangle: -45
+            },
+            yaxis: {
+                title: 'Relative Abundance (%)'
+            },
+            height: 600
+        };
+        
+        Plotly.newPlot('comparisonStackedBarChart', comparisonStackedBarData, comparisonStackedBarLayout, {responsive: true});
+        
+        // Comparison PCA Chart
+        const comparisonPCAData = [
+            {
+                x: {{ comparison_pca.x|tojson }},
+                y: {{ comparison_pca.y|tojson }},
+                mode: 'markers+text',
+                type: 'scatter',
+                marker: {
+                    size: 12,
+                    color: {{ comparison_pca.color|tojson }}
+                },
+                text: {{ comparison_pca.text|tojson }},
+                textposition: 'top center',
+                hoverinfo: 'text'
+            }
+        ];
+        
+        const comparisonPCALayout = {
+            margin: { t: 10, b: 60, l: 60, r: 10 },
+                        xaxis: {
+                            title: xAxis
+                        },
+                        yaxis: {
+                            title: yAxis
+                        },
+                        height: 500
+                    };
+                } else if (chartType === 'line') {
+                    data = [
+                        {
+                            x: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                            y: [23, 45, 56, 78, 43, 65, 57, 73, 62, 38],
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            line: {
+                                shape: 'spline',
+                                smoothing: 1.3
+                            },
+                            marker: {
+                                size: 8
+                            }
+                        }
+                    ];
+                    
+                    layout = {
+                        margin: { t: 10, b: 60, l: 60, r: 10 },
+                        xaxis: {
+                            title: xAxis
+                        },
+                        yaxis: {
+                            title: yAxis
+                        },
+                        height: 500
+                    };
+                } else if (chartType === 'pie') {
+                    data = [
+                        {
+                            values: [23, 45, 56, 78, 43],
+                            labels: ['Category A', 'Category B', 'Category C', 'Category D', 'Category E'],
+                            type: 'pie'
+                        }
+                    ];
+                    
+                    layout = {
+                        margin: { t: 10, b: 10, l: 10, r: 10 },
+                        height: 500
+                    };
+                } else {
+                    // Default to scatter plot
+                    data = [
+                        {
+                            x: [23, 45, 56, 78, 43, 65, 57, 73, 62, 38],
+                            y: [43, 53, 34, 65, 75, 43, 56, 34, 54, 67],
+                            mode: 'markers',
+                            type: 'scatter',
+                            marker: {
+                                size: 12,
+                                color: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                                colorscale: colorScheme
+                            }
+                        }
+                    ];
+                    
+                    layout = {
+                        margin: { t: 10, b: 60, l: 60, r: 10 },
+                        xaxis: {
+                            title: xAxis
+                        },
+                        yaxis: {
+                            title: yAxis
+                        },
+                        height: 500
+                    };
+                }
+                
+                Plotly.newPlot('customVisualizationChart', data, layout, {responsive: true});
+            }, 1000);
+        });
+        
+        // Reset custom visualization form
+        document.getElementById('resetCustom').addEventListener('click', function() {
+            document.getElementById('customVisualizationForm').reset();
+            document.getElementById('customVisualizationChart').innerHTML = '';
+        });
+        
+        // Save visualization button
+        document.getElementById('saveVisualizationBtn').addEventListener('click', function() {
+            // Show modal to enter visualization name and description
+            $('#createVisualizationModal').modal('show');
+        });
+        
+        // Export as image button
+        document.getElementById('exportImageBtn').addEventListener('click', function() {
+            // Get the active tab
+            const activeTab = document.querySelector('.tab-pane.active');
+            const activeChart = activeTab.querySelector('div[id$="Chart"]:not([style*="display: none"])');
+            
+            if (activeChart) {
+                Plotly.downloadImage(activeChart, {
+                    format: 'png',
+                    filename: 'visualization_export',
+                    height: 800,
+                    width: 1200
+                });
+            }
+        });
+        
+        // Export data button
+        document.getElementById('exportDataBtn').addEventListener('click', function() {
+            // This would be an AJAX call to get the data in CSV format in a real application
+            // For now, we'll just simulate a download
+            alert('In a real application, this would download the data in CSV format.');
+        });
+        
+        // Add to report button
+        document.getElementById('addToReportBtn').addEventListener('click', function() {
+            // This would be an AJAX call to add the visualization to a report in a real application
+            // For now, we'll just show a success message
+            alert('Visualization added to report successfully!');
+        });
+        
+        // Apply filters button
+        document.getElementById('applyFilters').addEventListener('click', function() {
+            // This would be an AJAX call to update the visualizations with the selected filters in a real application
+            // For now, we'll just show a loading state and then refresh the current charts
+            const filterForm = document.getElementById('visualizationFilters');
+            const samples = Array.from(document.getElementById('sampleSelect').selectedOptions).map(option => option.value);
+            const analyses = Array.from(document.getElementById('analysisSelect').selectedOptions).map(option => option.value);
+            const taxonomicLevel = document.getElementById('taxonomicLevelSelect').value;
+            const abundanceThreshold = document.getElementById('abundanceThreshold').value;
+            
+            // Show loading state
+            const charts = document.querySelectorAll('div[id$="Chart"]');
+            charts.forEach(chart => {
+                chart.innerHTML = '<div class="d-flex justify-content-center align-items-center" style="height: 600px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            });
+            
+            // Simulate loading delay
+            setTimeout(function() {
+                // Refresh all charts (in a real application, this would use new data from the server)
+                Plotly.newPlot('taxonomySunburstChart', taxonomySunburstData, taxonomySunburstLayout, {responsive: true});
+                Plotly.newPlot('taxonomyTreeChart', taxonomyTreeData, taxonomyTreeLayout, {responsive: true});
+                Plotly.newPlot('taxonomySankeyChart', taxonomySankeyData, taxonomySankeyLayout, {responsive: true});
+                Plotly.newPlot('abundanceBarChart', abundanceBarData, abundanceBarLayout, {responsive: true});
+                Plotly.newPlot('abundanceHeatmapChart', abundanceHeatmapData, abundanceHeatmapLayout, {responsive: true});
+                Plotly.newPlot('abundanceBubbleChart', abundanceBubbleData, abundanceBubbleLayout, {responsive: true});
+                Plotly.newPlot('comparisonStackedBarChart', comparisonStackedBarData, comparisonStackedBarLayout, {responsive: true});
+                Plotly.newPlot('comparisonPCAChart', comparisonPCAData, comparisonPCALayout, {responsive: true});
+                Plotly.newPlot('comparisonNMDSChart', comparisonNMDSData, comparisonNMDSLayout, {responsive: true});
+                Plotly.newPlot('depthLineChart', depthLineData, depthLineLayout, {responsive: true});
+                Plotly.newPlot('depthContourChart', depthContourData, depthContourLayout, {responsive: true});
+                updateDiversityChart(document.getElementById('diversityMetricSelect').value);
+                Plotly.newPlot('rarefactionCurveChart', rarefactionData, rarefactionLayout, {responsive: true});
+                
+                // Show success message
+                alert('Filters applied successfully!');
+            }, 1500);
+        });
+        
+        // Reset filters button
+        document.getElementById('resetFilters').addEventListener('click', function() {
+            document.getElementById('visualizationFilters').reset();
+            document.getElementById('abundanceThresholdValue').textContent = '0.5%';
+        });
+    });
+</script>
+{% endblock %}
+                title: 'PC1 (' + {{ comparison_pca.variance[0] }} + '%)'
+            },
+            yaxis: {
+                title: 'PC2 (' + {{ comparison_pca.variance[1] }} + '%)'
+            },
+            height: 600
+        };
+        
+        Plotly.newPlot('comparisonPCAChart', comparisonPCAData, comparisonPCALayout, {responsive: true});
+        
+        // Comparison NMDS Chart
+        const comparisonNMDSData = [
+            {
+                x: {{ comparison_nmds.x|tojson }},
+                y: {{ comparison_nmds.y|tojson }},
+                mode: 'markers+text',
+                type: 'scatter',
+                marker: {
+                    size: 12,
+                    color: {{ comparison_nmds.color|tojson }}
+                },
+                text: {{ comparison_nmds.text|tojson }},
+                textposition: 'top center',
+                hoverinfo: 'text'
+            }
+        ];
+        
+        const comparisonNMDSLayout = {
+            margin: { t: 10, b: 60, l: 60, r: 10 },
+            xaxis: {
+                title: 'NMDS1',
+                zeroline: false
+            },
+            yaxis: {
+                title: 'NMDS2',
+                zeroline: false
+            },
+            height: 600
+        };
+        
+        Plotly.newPlot('comparisonNMDSChart', comparisonNMDSData, comparisonNMDSLayout, {responsive: true});
+        
+        // Toggle between Comparison visualization types
+        document.getElementById('stackedBarViewBtn').addEventListener('click', function() {
+            document.getElementById('comparisonStackedBarChart').style.display = 'block';
+            document.getElementById('comparisonPCAChart').style.display = 'none';
+            document.getElementById('comparisonNMDSChart').style.display = 'none';
+            document.getElementById('stackedBarViewBtn').classList.add('active');
+            document.getElementById('pcaViewBtn').classList.remove('active');
+            document.getElementById('nmdsViewBtn').classList.remove('active');
+        });
+        
+        document.getElementById('pcaViewBtn').addEventListener('click', function() {
+            document.getElementById('comparisonStackedBarChart').style.display = 'none';
+            document.getElementById('comparisonPCAChart').style.display = 'block';
+            document.getElementById('comparisonNMDSChart').style.display = 'none';
+            document.getElementById('stackedBarViewBtn').classList.remove('active');
+            document.getElementById('pcaViewBtn').classList.add('active');
+            document.getElementById('nmdsViewBtn').classList.remove('active');
+        });
+        
+        document.getElementById('nmdsViewBtn').addEventListener('click', function() {
+            document.getElementById('comparisonStackedBarChart').style.display = 'none';
+            document.getElementById('comparisonPCAChart').style.display = 'none';
+            document.getElementById('comparisonNMDSChart').style.display = 'block';
+            document.getElementById('stackedBarViewBtn').classList.remove('active');
+            document.getElementById('pcaViewBtn').classList.remove('active');
+            document.getElementById('nmdsViewBtn').classList.add('active');
+        });
+        
+        // Depth Line Chart
+        const depthLineData = {{ depth_line|tojson }};
+        
+        const depthLineLayout = {
+            margin: { t: 10, b: 60, l: 60, r: 10 },
+            xaxis: {
+                title: 'Depth (m)',
+                autorange: 'reversed' // Deep water on the right
+            },
+            yaxis: {
+                title: 'Relative Abundance (%)'
+            },
+            height: 600,
+            legend: {
+                orientation: 'h',
+                y: -0.2
+            }
+        };
+        
+        Plotly.newPlot('depthLineChart', depthLineData, depthLineLayout, {responsive: true});
+        
+        // Depth Contour Chart
+        const depthContourData = [
+            {
+                z: {{ depth_contour.z|tojson }},
+                x: {{ depth_contour.x|tojson }},
+                y: {{ depth_contour.y|tojson }},
+                type: 'contour',
+                colorscale: 'Viridis',
+                contours: {
+                    coloring: 'heatmap'
+                },
+                colorbar: {
+                    title: 'Abundance (%)',
+                    titleside: 'right'
+                }
+            }
+        ];
+        
+        const depthContourLayout = {
+            margin: { t: 10, b: 60, l: 60, r: 80 },
+            xaxis: {
+                title: 'Depth (m)',
+                autorange: 'reversed' // Deep water on the right
+            },
+            yaxis: {
+                title: 'Taxon'
+            },
+            height: 600
+        };
+        
+        Plotly.newPlot('depthContourChart', depthContourData, depthContourLayout, {responsive: true});
+        
+        // Toggle between Depth visualization types
+        document.getElementById('lineViewBtn').addEventListener('click', function() {
+            document.getElementById('depthLineChart').style.display = 'block';
+            document.getElementById('depthContourChart').style.display = 'none';
+            document.getElementById('lineViewBtn').classList.add('active');
+            document.getElementById('contourViewBtn').classList.remove('active');
+        });
+        
+        document.getElementById('contourViewBtn').addEventListener('click', function() {
+            document.getElementById('depthLineChart').style.display = 'none';
+            document.getElementById('depthContourChart').style.display = 'block';
+            document.getElementById('lineViewBtn').classList.remove('active');
+            document.getElementById('contourViewBtn').classList.add('active');
+        });
+        
+        // Diversity Comparison Chart
+        function updateDiversityChart(metric) {
+            const diversityData = {
+                'shannon': {
+                    values: {{ diversity_metrics.shannon|tojson }},
+                    title: 'Shannon Diversity Index'
+                },
+                'simpson': {
+                    values: {{ diversity_metrics.simpson|tojson }},
+                    title: 'Simpson Diversity Index'
+                },
+                'chao1': {
+                    values: {{ diversity_metrics.chao1|tojson }},
+                    title: 'Chao1 Richness Estimator'
+                },
+                'evenness': {
+                    values: {{ diversity_metrics.evenness|tojson }},
+                    title: 'Pielou\'s Evenness'
+                }
+            };
+            
+            const data = [
+                {
+                    x: {{ sample_names|tojson }},
+                    y: diversityData[metric].values,
+                    type: 'bar',
+                    marker: {
+                        color: 'rgba(55, 128, 191, 0.7)',
+                        line: {
+                            color: 'rgba(55, 128, 191, 1.0)',
+                            width: 1
+                        }
+                    }
+                }
+            ];
+            
+            const layout = {
+                margin: { t: 10, b: 120, l: 60, r: 10 },
+                yaxis: {
+                    title: diversityData[metric].title
+                },
+                xaxis: {
+                    tickangle: -45
+                },
+                height: 400
+            };
+            
+            Plotly.newPlot('diversityComparisonChart', data, layout, {responsive: true});
+        }
+        
+        // Initialize with Shannon diversity
+        updateDiversityChart('shannon');
+        
+        // Update chart when diversity metric changes
+        document.getElementById('diversityMetricSelect').addEventListener('change', function() {
+            updateDiversityChart(this.value);
+        });
+        
+        // Rarefaction Curve Chart
+        const rarefactionData = [
+            {
+                x: {{ rarefaction.x|tojson }},
+                y: {{ rarefaction.y|tojson }},
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: {
+                    shape: 'spline',
+                    smoothing: 1.3
+                },
+                marker: {
+                    size: 6
+                }
+            }
+        ];
+        
+        const rarefactionLayout = {
+            margin: { t: 10, b: 40, l: 60, r: 10 },
+            xaxis: {
+                title: 'Sampling Depth'
+            },
+            yaxis: {
+                title: 'Observed Taxa'
+            },
+            height: 200
+        };
+        
+        Plotly.newPlot('rarefactionCurveChart', rarefactionData, rarefactionLayout, {responsive: true});
+        
+        // Update rarefaction curve when sample changes
+        document.getElementById('rarefactionSampleSelect').addEventListener('change', function() {
+            // This would be an AJAX call to get new data in a real application
+            // For now, we'll just simulate a loading state
+            document.getElementById('rarefactionCurveChart').innerHTML = '<div class="d-flex justify-content-center align-items-center" style="height: 200px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            
+            // Simulate loading delay
+            setTimeout(function() {
+                // This would be replaced with actual data from the server
+                Plotly.newPlot('rarefactionCurveChart', rarefactionData, rarefactionLayout, {responsive: true});
+                
+                // Update interpretation text
+                document.getElementById('diversityInterpretation').innerHTML = '<p>The rarefaction curve for sample "' + document.getElementById('rarefactionSampleSelect').options[document.getElementById('rarefactionSampleSelect').selectedIndex].text + '" shows the number of observed species as a function of sampling effort. The curve begins to plateau, indicating that the sampling depth is sufficient to capture most of the diversity in this sample.</p>';
+            }, 1000);
+        });
+        
+        // Custom Visualization Chart
+        document.getElementById('generateCustom').addEventListener('click', function() {
+            const chartType = document.getElementById('customChartType').value;
+            const dataSource = document.getElementById('customDataSource').value;
+            const colorScheme = document.getElementById('customColorScheme').value;
+            const xAxis = document.getElementById('customXAxis').value;
+            const yAxis = document.getElementById('customYAxis').value;
+            
+            // This would be an AJAX call to get custom visualization data in a real application
+            // For now, we'll just show a placeholder chart
+            document.getElementById('customVisualizationChart').innerHTML = '<div class="d-flex justify-content-center align-items-center" style="height: 500px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            
+            // Simulate loading delay
+            setTimeout(function() {
+                let data, layout;
+                
+                if (chartType === 'bar') {
+                    data = [
+                        {
+                            x: ['Sample A', 'Sample B', 'Sample C', 'Sample D', 'Sample E'],
+                            y: [23, 45, 56, 78, 43],
+                            type: 'bar',
+                            marker: {
+                                color: 'rgba(55, 128, 191, 0.7)',
+                                line: {
+                                    color: 'rgba(55, 128, 191, 1.0)',
+                                    width: 1
+                                }
+                            }
+                        }
+                    ];
+                    
+                    layout = {
+                        margin: { t: 10, b: 60, l: 60, r: 10 },
+                        xaxis: {

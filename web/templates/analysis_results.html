@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis Results - {{ sample.name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder me-1"></i>{{ project.title }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-chart-bar me-1"></i>Analysis Results</li>
+      </ol>
+    </nav>
+    <h1 class="display-6 fw-bold text-primary"><i class="fas fa-chart-bar me-2"></i>Results: {{ sample.name }}</h1>
+    <p class="text-muted mb-0">Analysis ID: {{ analysis.id }} • Type: {{ analysis.analysis_type|title }} • Status: {{ analysis.status|title }}</p>
+    <div class="ocean-divider mt-3 mb-4"></div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card ocean-card mb-4">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas fa-image me-2"></i>Visualization</h4>
+      </div>
+      <div class="card-body">
+        <div class="figure text-center">
+          {% if analysis.result_path %}
+            {% set rp = analysis.result_path %}
+            {% if rp[:7] == 'static/' %}
+              <img src="{{ url_for('static', filename=rp[7:]) }}" alt="Analysis Visualization" class="img-fluid rounded shadow">
+            {% else %}
+              <img src="{{ rp }}" alt="Analysis Visualization" class="img-fluid rounded shadow">
+            {% endif %}
+          {% else %}
+            <img src="{{ url_for('static', filename='img/demo/sample_visualization.svg') }}" alt="Analysis Visualization" class="img-fluid rounded shadow">
+          {% endif %}
+          <div class="form-text mt-2">Demo visualization (mock pipeline)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-dna me-2"></i>Summary</h5>
+      </div>
+      <div class="card-body">
+        <ul class="mb-0">
+          <li><strong>Sample:</strong> {{ sample.name }} ({{ sample.get_file_extension()|upper }}, {{ sample.get_file_size_display() }})</li>
+          <li><strong>Result path:</strong> {{ analysis.result_path or '—' }}</li>
+          <li><strong>Completed at:</strong> {{ analysis.completed_at.strftime('%Y-%m-%d %H:%M') if analysis.completed_at else '—' }}</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="d-grid gap-2 d-md-flex">
+      <a href="{{ url_for('download_sample', sample_id=sample.id) }}" class="btn btn-outline-primary"><i class="fas fa-download me-1"></i>Download Sample</a>
+      <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Project</a>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-comments me-2"></i>Comments</h5>
+      </div>
+      <div class="card-body">
+        {% if comments and comments|length > 0 %}
+          <ul class="list-group list-group-flush mb-3">
+            {% for c in comments %}
+              <li class="list-group-item">
+                <div class="small text-muted mb-1">{{ c.created_at.strftime('%Y-%m-%d %H:%M') if c.created_at else '' }}</div>
+                <div>{{ c.text }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted">No comments yet.</p>
+        {% endif %}
+        <form method="POST" action="#" onsubmit="alert('Comment submission is mocked in this demo.'); return false;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-2">
+            <textarea class="form-control" rows="3" placeholder="Add a comment..."></textarea>
+          </div>
+          <div class="d-grid">
+            <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane me-1"></i>Post</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

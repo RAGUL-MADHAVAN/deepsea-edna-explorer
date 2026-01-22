@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Analyze Sample - {{ sample.name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder me-1"></i>{{ project.title }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-microscope me-1"></i>Analyze Sample</li>
+      </ol>
+    </nav>
+    <h1 class="display-6 fw-bold text-primary"><i class="fas fa-microscope me-2"></i>Analyze: {{ sample.name }}</h1>
+    <p class="text-muted mb-0">File: {{ sample.get_file_name() }} • Size: {{ sample.get_file_size_display() }} • Type: {{ sample.get_file_extension()|upper }}</p>
+    <div class="ocean-divider mt-3 mb-4"></div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-7">
+    <div class="card ocean-card">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas fa-cogs me-2"></i>Run Analysis</h4>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('analyze_sample', sample_id=sample.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label for="analysis_type" class="form-label">Analysis Type</label>
+            <select class="form-select" id="analysis_type" name="analysis_type" required>
+              <option value="standard" selected>Standard</option>
+              <option value="novel">Novel Discovery</option>
+              <option value="fast">Fast Mode</option>
+            </select>
+          </div>
+          <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+            <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-outline-secondary">Back to Project</a>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-play me-1"></i>Run</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Sample Details</h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item"><strong>Name:</strong> {{ sample.name }}</li>
+          <li class="list-group-item"><strong>Description:</strong> {{ sample.description or '—' }}</li>
+          <li class="list-group-item"><strong>Uploaded:</strong> {{ sample.created_at.strftime('%Y-%m-%d %H:%M') if sample.created_at else '—' }}</li>
+          {% set md = sample.get_metadata() %}
+          <li class="list-group-item"><strong>Location:</strong> {{ md.get('location','—') }}</li>
+          <li class="list-group-item"><strong>Depth (m):</strong> {{ md.get('depth','—') }}</li>
+          <li class="list-group-item"><strong>Collection Date:</strong> {{ md.get('collection_date','—') }}</li>
+          <li class="list-group-item"><strong>Sample Type:</strong> {{ md.get('sample_type','—') }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

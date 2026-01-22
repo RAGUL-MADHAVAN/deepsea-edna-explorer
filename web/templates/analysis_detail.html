@@ -1,0 +1,1027 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Analysis Results{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}">Projects</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.title }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('sample_detail', project_id=project.id, sample_id=sample.id) }}">{{ sample.name }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ analysis.name }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="display-5 fw-bold">{{ analysis.name }}</h1>
+        <p class="lead">{{ analysis.description|default('No description provided', true) }}</p>
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                {% if analysis.status == 'completed' %}
+                <span class="badge bg-success">Completed</span>
+                {% elif analysis.status == 'failed' %}
+                <span class="badge bg-danger">Failed</span>
+                {% elif analysis.status == 'running' %}
+                <span class="badge bg-primary">Running</span>
+                {% elif analysis.status == 'queued' %}
+                <span class="badge bg-secondary">Queued</span>
+                {% endif %}
+            </div>
+            <div class="text-muted">{{ analysis.created_at|datetimeformat }}</div>
+        </div>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <div class="btn-group">
+            <a href="{{ url_for('generate_report', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}" class="btn btn-primary">
+                <i class="fas fa-file-alt me-1"></i>Generate Report
+            </a>
+            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ url_for('download_analysis_results', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}">
+                    <i class="fas fa-download me-2"></i>Download Results
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('share_analysis', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}">
+                    <i class="fas fa-share-alt me-2"></i>Share Analysis
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteAnalysisModal">
+                    <i class="fas fa-trash-alt me-2"></i>Delete Analysis
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% if analysis.status == 'running' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-spinner fa-spin me-2"></i>Analysis in Progress</h5>
+                <p>Your analysis is currently running. This page will automatically update when the analysis is complete.</p>
+                <div class="progress mb-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ analysis.progress|default(50, true) }}%" aria-valuenow="{{ analysis.progress|default(50, true) }}" aria-valuemin="0" aria-valuemax="100">{{ analysis.progress|default(50, true) }}%</div>
+                </div>
+                <div class="d-flex justify-content-between text-muted small">
+                    <div>Current step: {{ analysis.current_step|default('Processing data', true) }}</div>
+                    <div>Estimated time remaining: {{ analysis.time_remaining|default('Calculating...', true) }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% elif analysis.status == 'failed' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-danger">
+            <div class="card-body">
+                <h5 class="card-title text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Analysis Failed</h5>
+                <p>Unfortunately, this analysis encountered an error and could not be completed.</p>
+                <div class="bg-light p-3 rounded mb-3">
+                    <pre class="mb-0">{{ analysis.error_message|default('Unknown error occurred during analysis.', true) }}</pre>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <a href="{{ url_for('run_analysis', project_id=project.id, sample_id=sample.id) }}" class="btn btn-primary">
+                        <i class="fas fa-redo me-1"></i>Try Again
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% elif analysis.status == 'queued' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-clock me-2"></i>Analysis Queued</h5>
+                <p>Your analysis is in the queue and will start soon. This page will automatically update when the analysis begins.</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted">Queue position: {{ analysis.queue_position|default(1, true) }}</div>
+                    <a href="{{ url_for('cancel_analysis', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if analysis.status == 'completed' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="resultsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab" aria-controls="summary" aria-selected="true">
+                            <i class="fas fa-chart-pie me-1"></i>Summary
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="taxonomy-tab" data-bs-toggle="tab" data-bs-target="#taxonomy" type="button" role="tab" aria-controls="taxonomy" aria-selected="false">
+                            <i class="fas fa-sitemap me-1"></i>Taxonomy
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="abundance-tab" data-bs-toggle="tab" data-bs-target="#abundance" type="button" role="tab" aria-controls="abundance" aria-selected="false">
+                            <i class="fas fa-chart-bar me-1"></i>Abundance
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="depth-tab" data-bs-toggle="tab" data-bs-target="#depth" type="button" role="tab" aria-controls="depth" aria-selected="false">
+                            <i class="fas fa-water me-1"></i>Depth Distribution
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab" aria-controls="details" aria-selected="false">
+                            <i class="fas fa-info-circle me-1"></i>Details
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="resultsTabsContent">
+                    <!-- Summary Tab -->
+                    <div class="tab-pane fade show active" id="summary" role="tabpanel" aria-labelledby="summary-tab">
+                        <div class="row">
+                            <div class="col-md-4 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Sequence Statistics</h5>
+                                        <div class="d-flex flex-column">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <div>Total Sequences:</div>
+                                                <div class="fw-bold">{{ analysis.total_sequences|numberformat }}</div>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <div>Classified Sequences:</div>
+                                                <div class="fw-bold">{{ analysis.classified_sequences|numberformat }} ({{ analysis.classified_percentage }}%)</div>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <div>Unclassified Sequences:</div>
+                                                <div class="fw-bold">{{ analysis.unclassified_sequences|numberformat }} ({{ analysis.unclassified_percentage }}%)</div>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <div>Average Sequence Length:</div>
+                                                <div class="fw-bold">{{ analysis.avg_sequence_length|numberformat }} bp</div>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <div>Unique Taxa:</div>
+                                                <div class="fw-bold">{{ analysis.unique_taxa|numberformat }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Taxonomic Diversity</h5>
+                                        <div id="taxonomicDiversityChart" style="height: 250px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Top 5 Species</h5>
+                                        <div class="list-group list-group-flush">
+                                            {% for species in top_species %}
+                                            <div class="list-group-item px-0">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <div class="fw-bold">{{ species.name }}</div>
+                                                        <div class="text-muted small">{{ species.phylum }}</div>
+                                                    </div>
+                                                    <div class="badge bg-primary rounded-pill">{{ species.percentage }}%</div>
+                                                </div>
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    <div class="progress-bar" role="progressbar" style="width: {{ species.percentage }}%" aria-valuenow="{{ species.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Taxonomic Composition</h5>
+                                        <div id="taxonomicCompositionChart" style="height: 400px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Key Findings</h5>
+                                        <ul class="list-group list-group-flush">
+                                            {% for finding in key_findings %}
+                                            <li class="list-group-item px-0">
+                                                <div class="d-flex">
+                                                    <div class="flex-shrink-0">
+                                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                                    </div>
+                                                    <div>{{ finding }}</div>
+                                                </div>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Taxonomy Tab -->
+                    <div class="tab-pane fade" id="taxonomy" role="tabpanel" aria-labelledby="taxonomy-tab">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="card-title mb-0">Taxonomic Classification</h5>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary active" id="sunburstViewBtn">
+                                                    <i class="fas fa-chart-pie me-1"></i>Sunburst
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" id="treeViewBtn">
+                                                    <i class="fas fa-sitemap me-1"></i>Tree
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div id="taxonomySunburstChart" style="height: 600px;"></div>
+                                        <div id="taxonomyTreeChart" style="height: 600px; display: none;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-0">Taxonomic Table</h5>
+                                            <div class="input-group" style="width: 300px;">
+                                                <input type="text" class="form-control form-control-sm" id="taxonomySearch" placeholder="Search taxa...">
+                                                <button class="btn btn-outline-secondary btn-sm" type="button">
+                                                    <i class="fas fa-search"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover table-striped mb-0" id="taxonomyTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Taxon</th>
+                                                        <th>Rank</th>
+                                                        <th>Count</th>
+                                                        <th>Abundance (%)</th>
+                                                        <th>Confidence</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for taxon in taxonomy_table %}
+                                                    <tr>
+                                                        <td>
+                                                            <span class="taxon-name">{{ taxon.name }}</span>
+                                                            {% if taxon.ncbi_id %}
+                                                            <a href="https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id={{ taxon.ncbi_id }}" target="_blank" class="text-muted ms-1" title="View in NCBI Taxonomy">
+                                                                <i class="fas fa-external-link-alt"></i>
+                                                            </a>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>{{ taxon.rank }}</td>
+                                                        <td>{{ taxon.count|numberformat }}</td>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="progress flex-grow-1 me-2" style="height: 5px;">
+                                                                    <div class="progress-bar" role="progressbar" style="width: {{ taxon.abundance }}%"></div>
+                                                                </div>
+                                                                <div>{{ taxon.abundance }}%</div>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="d-flex align-items-center">
+                                                                <div class="progress flex-grow-1 me-2" style="height: 5px;">
+                                                                    <div class="progress-bar {{ 'bg-success' if taxon.confidence >= 80 else ('bg-warning' if taxon.confidence >= 60 else 'bg-danger') }}" role="progressbar" style="width: {{ taxon.confidence }}%"></div>
+                                                                </div>
+                                                                <div>{{ taxon.confidence }}%</div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Abundance Tab -->
+                    <div class="tab-pane fade" id="abundance" role="tabpanel" aria-labelledby="abundance-tab">
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="card-title mb-0">Relative Abundance</h5>
+                                            <div>
+                                                <select class="form-select form-select-sm" id="abundanceTaxonomicLevel">
+                                                    <option value="phylum">Phylum</option>
+                                                    <option value="class">Class</option>
+                                                    <option value="order">Order</option>
+                                                    <option value="family">Family</option>
+                                                    <option value="genus">Genus</option>
+                                                    <option value="species">Species</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div id="abundanceBarChart" style="height: 500px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Abundance Statistics</h5>
+                                        <div class="mb-3">
+                                            <label for="abundanceMetric" class="form-label">Metric</label>
+                                            <select class="form-select" id="abundanceMetric">
+                                                <option value="shannon">Shannon Diversity Index</option>
+                                                <option value="simpson">Simpson Diversity Index</option>
+                                                <option value="chao1">Chao1 Richness Estimator</option>
+                                                <option value="evenness">Pielou's Evenness</option>
+                                            </select>
+                                        </div>
+                                        <div id="diversityMetricValue" class="text-center mb-3">
+                                            <div class="display-4 fw-bold">3.42</div>
+                                            <div class="text-muted">Shannon Diversity Index</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="fw-bold mb-2">Interpretation:</div>
+                                            <div id="diversityInterpretation">
+                                                <p>The Shannon diversity index value of 3.42 indicates a relatively high diversity in this sample. This suggests a rich and varied community of species with a balanced distribution.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Abundance Heatmap</h5>
+                                        <div class="mb-3">
+                                            <div class="row g-3 align-items-center">
+                                                <div class="col-auto">
+                                                    <label for="heatmapTaxonomicLevel" class="col-form-label">Taxonomic Level:</label>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <select class="form-select form-select-sm" id="heatmapTaxonomicLevel">
+                                                        <option value="phylum">Phylum</option>
+                                                        <option value="class">Class</option>
+                                                        <option value="order">Order</option>
+                                                        <option value="family">Family</option>
+                                                        <option value="genus" selected>Genus</option>
+                                                        <option value="species">Species</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <label for="heatmapTopTaxa" class="col-form-label">Show top:</label>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <select class="form-select form-select-sm" id="heatmapTopTaxa">
+                                                        <option value="10">10</option>
+                                                        <option value="20" selected>20</option>
+                                                        <option value="30">30</option>
+                                                        <option value="50">50</option>
+                                                        <option value="all">All</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="abundanceHeatmap" style="height: 500px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Depth Distribution Tab -->
+                    <div class="tab-pane fade" id="depth" role="tabpanel" aria-labelledby="depth-tab">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="card-title mb-0">Depth Distribution</h5>
+                                            <div>
+                                                <select class="form-select form-select-sm" id="depthTaxonomicLevel">
+                                                    <option value="phylum">Phylum</option>
+                                                    <option value="class">Class</option>
+                                                    <option value="order">Order</option>
+                                                    <option value="family">Family</option>
+                                                    <option value="genus">Genus</option>
+                                                    <option value="species">Species</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div id="depthDistributionChart" style="height: 600px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Depth Zones</h5>
+                                        <div id="depthZonesChart" style="height: 300px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Depth-Related Insights</h5>
+                                        <ul class="list-group list-group-flush">
+                                            {% for insight in depth_insights %}
+                                            <li class="list-group-item px-0">
+                                                <div class="d-flex">
+                                                    <div class="flex-shrink-0">
+                                                        <i class="fas fa-water text-primary me-2"></i>
+                                                    </div>
+                                                    <div>{{ insight }}</div>
+                                                </div>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Details Tab -->
+                    <div class="tab-pane fade" id="details" role="tabpanel" aria-labelledby="details-tab">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Analysis Configuration</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-5">Analysis Type:</dt>
+                                            <dd class="col-sm-7">{{ analysis.analysis_type }}</dd>
+                                            
+                                            <dt class="col-sm-5">Classification Model:</dt>
+                                            <dd class="col-sm-7">{{ analysis.classification_model }}</dd>
+                                            
+                                            <dt class="col-sm-5">Reference Database:</dt>
+                                            <dd class="col-sm-7">{{ analysis.reference_database }}</dd>
+                                            
+                                            <dt class="col-sm-5">Confidence Threshold:</dt>
+                                            <dd class="col-sm-7">{{ analysis.confidence_threshold }}%</dd>
+                                            
+                                            <dt class="col-sm-5">Quality Filtering:</dt>
+                                            <dd class="col-sm-7">{{ 'Yes' if analysis.quality_filtering else 'No' }}</dd>
+                                            
+                                            {% if analysis.quality_filtering %}
+                                            <dt class="col-sm-5 ps-4">Min Quality Score:</dt>
+                                            <dd class="col-sm-7">{{ analysis.min_quality }}</dd>
+                                            {% endif %}
+                                            
+                                            <dt class="col-sm-5">Adapter Trimming:</dt>
+                                            <dd class="col-sm-7">{{ 'Yes' if analysis.adapter_trimming else 'No' }}</dd>
+                                            
+                                            <dt class="col-sm-5">Length Filtering:</dt>
+                                            <dd class="col-sm-7">{{ 'Yes' if analysis.length_filtering else 'No' }}</dd>
+                                            
+                                            {% if analysis.length_filtering %}
+                                            <dt class="col-sm-5 ps-4">Min Length:</dt>
+                                            <dd class="col-sm-7">{{ analysis.min_length }} bp</dd>
+                                            
+                                            <dt class="col-sm-5 ps-4">Max Length:</dt>
+                                            <dd class="col-sm-7">{{ analysis.max_length }} bp</dd>
+                                            {% endif %}
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Performance Metrics</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-6">Processing Time:</dt>
+                                            <dd class="col-sm-6">{{ analysis.processing_time }}</dd>
+                                            
+                                            <dt class="col-sm-6">Memory Usage:</dt>
+                                            <dd class="col-sm-6">{{ analysis.memory_usage }}</dd>
+                                            
+                                            <dt class="col-sm-6">CPU Utilization:</dt>
+                                            <dd class="col-sm-6">{{ analysis.cpu_utilization }}</dd>
+                                            
+                                            <dt class="col-sm-6">Classification Rate:</dt>
+                                            <dd class="col-sm-6">{{ analysis.classification_rate }} sequences/sec</dd>
+                                            
+                                            <dt class="col-sm-6">Model Accuracy:</dt>
+                                            <dd class="col-sm-6">{{ analysis.model_accuracy }}%</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                                
+                                <div class="card mt-4">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Analysis Log</h5>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.8rem;">
+                                            {% for log in analysis_logs %}
+                                            <div class="log-entry">
+                                                <span class="log-timestamp text-muted">{{ log.timestamp }}</span>
+                                                <span class="log-level {{ log.level|lower }}">{{ log.level }}</span>
+                                                <span class="log-message">{{ log.message }}</span>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Analysis Modal -->
+<div class="modal fade" id="deleteAnalysisModal" tabindex="-1" aria-labelledby="deleteAnalysisModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAnalysisModalLabel">Delete Analysis</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the analysis <strong>{{ analysis.name }}</strong>?</p>
+                <p class="text-danger">This action cannot be undone. All results associated with this analysis will also be deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('delete_analysis', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Delete Analysis</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-2.14.0.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if analysis.status == 'completed' %}
+        // Taxonomic Diversity Chart (Donut Chart)
+        const taxonomicDiversityData = [
+            {
+                values: [{{ analysis.phylum_count }}, {{ analysis.class_count }}, {{ analysis.order_count }}, {{ analysis.family_count }}, {{ analysis.genus_count }}, {{ analysis.species_count }}],
+                labels: ['Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species'],
+                type: 'pie',
+                hole: 0.4,
+                marker: {
+                    colors: ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+                },
+                textinfo: 'label+percent',
+                insidetextorientation: 'radial'
+            }
+        ];
+        
+        const taxonomicDiversityLayout = {
+            margin: { t: 0, b: 0, l: 0, r: 0 },
+            showlegend: false,
+            height: 250
+        };
+        
+        Plotly.newPlot('taxonomicDiversityChart', taxonomicDiversityData, taxonomicDiversityLayout, {responsive: true});
+        
+        // Taxonomic Composition Chart (Stacked Bar Chart)
+        const taxonomicCompositionData = [
+            {% for phylum in phylum_composition %}
+            {
+                x: ['Sample'],
+                y: [{{ phylum.percentage }}],
+                name: '{{ phylum.name }}',
+                type: 'bar'
+            },
+            {% endfor %}
+        ];
+        
+        const taxonomicCompositionLayout = {
+            barmode: 'stack',
+            margin: { t: 10, b: 80, l: 60, r: 10 },
+            legend: {
+                orientation: 'h',
+                y: -0.2
+            },
+            yaxis: {
+                title: 'Relative Abundance (%)',
+                range: [0, 100]
+            },
+            height: 400
+        };
+        
+        Plotly.newPlot('taxonomicCompositionChart', taxonomicCompositionData, taxonomicCompositionLayout, {responsive: true});
+        
+        // Taxonomy Sunburst Chart
+        const taxonomySunburstData = [
+            {
+                type: 'sunburst',
+                labels: {{ taxonomy_sunburst.labels|tojson }},
+                parents: {{ taxonomy_sunburst.parents|tojson }},
+                values: {{ taxonomy_sunburst.values|tojson }},
+                branchvalues: 'total',
+                textinfo: 'label+percent entry',
+                maxdepth: 3
+            }
+        ];
+        
+        const taxonomySunburstLayout = {
+            margin: { t: 10, b: 10, l: 10, r: 10 },
+            sunburstcolorway: ['#636efa', '#ef553b', '#00cc96', '#ab63fa', '#19d3f3', '#e763fa', '#fecb52', '#ffa15a', '#ff6692', '#b6e880'],
+            height: 600
+        };
+        
+        Plotly.newPlot('taxonomySunburstChart', taxonomySunburstData, taxonomySunburstLayout, {responsive: true});
+        
+        // Taxonomy Tree Chart
+        const taxonomyTreeData = [
+            {
+                type: 'treemap',
+                labels: {{ taxonomy_sunburst.labels|tojson }},
+                parents: {{ taxonomy_sunburst.parents|tojson }},
+                values: {{ taxonomy_sunburst.values|tojson }},
+                textinfo: 'label+value+percent entry',
+                marker: {
+                    colorscale: 'Viridis'
+                }
+            }
+        ];
+        
+        const taxonomyTreeLayout = {
+            margin: { t: 0, b: 0, l: 0, r: 0 },
+            height: 600
+        };
+        
+        Plotly.newPlot('taxonomyTreeChart', taxonomyTreeData, taxonomyTreeLayout, {responsive: true});
+        
+        // Toggle between Sunburst and Tree views
+        document.getElementById('sunburstViewBtn').addEventListener('click', function() {
+            document.getElementById('taxonomySunburstChart').style.display = 'block';
+            document.getElementById('taxonomyTreeChart').style.display = 'none';
+            document.getElementById('sunburstViewBtn').classList.add('active');
+            document.getElementById('treeViewBtn').classList.remove('active');
+        });
+        
+        document.getElementById('treeViewBtn').addEventListener('click', function() {
+            document.getElementById('taxonomySunburstChart').style.display = 'none';
+            document.getElementById('taxonomyTreeChart').style.display = 'block';
+            document.getElementById('sunburstViewBtn').classList.remove('active');
+            document.getElementById('treeViewBtn').classList.add('active');
+        });
+        
+        // Abundance Bar Chart
+        function updateAbundanceChart(level) {
+            const abundanceData = {
+                'phylum': {{ abundance_data.phylum|tojson }},
+                'class': {{ abundance_data.class|tojson }},
+                'order': {{ abundance_data.order|tojson }},
+                'family': {{ abundance_data.family|tojson }},
+                'genus': {{ abundance_data.genus|tojson }},
+                'species': {{ abundance_data.species|tojson }}
+            };
+            
+            const data = [
+                {
+                    x: abundanceData[level].map(item => item.name),
+                    y: abundanceData[level].map(item => item.abundance),
+                    type: 'bar',
+                    marker: {
+                        color: 'rgba(55, 128, 191, 0.7)',
+                        line: {
+                            color: 'rgba(55, 128, 191, 1.0)',
+                            width: 1
+                        }
+                    }
+                }
+            ];
+            
+            const layout = {
+                margin: { t: 10, b: 120, l: 60, r: 10 },
+                yaxis: {
+                    title: 'Relative Abundance (%)'
+                },
+                xaxis: {
+                    tickangle: -45
+                },
+                height: 500
+            };
+            
+            Plotly.newPlot('abundanceBarChart', data, layout, {responsive: true});
+        }
+        
+        // Initialize with phylum level
+        updateAbundanceChart('phylum');
+        
+        // Update chart when taxonomic level changes
+        document.getElementById('abundanceTaxonomicLevel').addEventListener('change', function() {
+            updateAbundanceChart(this.value);
+        });
+        
+        // Abundance Heatmap
+        function updateHeatmap(level, topN) {
+            const heatmapData = {
+                'phylum': {{ heatmap_data.phylum|tojson }},
+                'class': {{ heatmap_data.class|tojson }},
+                'order': {{ heatmap_data.order|tojson }},
+                'family': {{ heatmap_data.family|tojson }},
+                'genus': {{ heatmap_data.genus|tojson }},
+                'species': {{ heatmap_data.species|tojson }}
+            };
+            
+            let data = heatmapData[level];
+            
+            // Filter top N taxa if not 'all'
+            if (topN !== 'all') {
+                data = data.slice(0, parseInt(topN));
+            }
+            
+            const heatmapTrace = {
+                z: [data.map(item => item.abundance)],
+                x: data.map(item => item.name),
+                y: ['Abundance'],
+                type: 'heatmap',
+                colorscale: 'Viridis',
+                showscale: true,
+                colorbar: {
+                    title: 'Abundance (%)',
+                    titleside: 'right'
+                }
+            };
+            
+            const layout = {
+                margin: { t: 10, b: 120, l: 60, r: 80 },
+                xaxis: {
+                    tickangle: -45
+                },
+                height: 500
+            };
+            
+            Plotly.newPlot('abundanceHeatmap', [heatmapTrace], layout, {responsive: true});
+        }
+        
+        // Initialize heatmap with genus level and top 20
+        updateHeatmap('genus', '20');
+        
+        // Update heatmap when parameters change
+        document.getElementById('heatmapTaxonomicLevel').addEventListener('change', function() {
+            updateHeatmap(this.value, document.getElementById('heatmapTopTaxa').value);
+        });
+        
+        document.getElementById('heatmapTopTaxa').addEventListener('change', function() {
+            updateHeatmap(document.getElementById('heatmapTaxonomicLevel').value, this.value);
+        });
+        
+        // Depth Distribution Chart
+        function updateDepthChart(level) {
+            const depthData = {
+                'phylum': {{ depth_data.phylum|tojson }},
+                'class': {{ depth_data.class|tojson }},
+                'order': {{ depth_data.order|tojson }},
+                'family': {{ depth_data.family|tojson }},
+                'genus': {{ depth_data.genus|tojson }},
+                'species': {{ depth_data.species|tojson }}
+            };
+            
+            const data = [];
+            
+            // Create a trace for each taxon
+            depthData[level].forEach(taxon => {
+                data.push({
+                    x: taxon.depths,
+                    y: taxon.abundances,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: taxon.name,
+                    line: {
+                        shape: 'spline',
+                        smoothing: 1.3
+                    }
+                });
+            });
+            
+            const layout = {
+                margin: { t: 10, b: 60, l: 60, r: 10 },
+                xaxis: {
+                    title: 'Depth (m)',
+                    autorange: 'reversed' // Deep water on the right
+                },
+                yaxis: {
+                    title: 'Relative Abundance (%)'
+                },
+                height: 600,
+                legend: {
+                    orientation: 'h',
+                    y: -0.2
+                }
+            };
+            
+            Plotly.newPlot('depthDistributionChart', data, layout, {responsive: true});
+        }
+        
+        // Initialize with phylum level
+        updateDepthChart('phylum');
+        
+        // Update chart when taxonomic level changes
+        document.getElementById('depthTaxonomicLevel').addEventListener('change', function() {
+            updateDepthChart(this.value);
+        });
+        
+        // Depth Zones Chart
+        const depthZonesData = [
+            {
+                values: [{{ depth_zones.epipelagic }}, {{ depth_zones.mesopelagic }}, {{ depth_zones.bathypelagic }}, {{ depth_zones.abyssopelagic }}, {{ depth_zones.hadopelagic }}],
+                labels: ['Epipelagic (0-200m)', 'Mesopelagic (200-1000m)', 'Bathypelagic (1000-4000m)', 'Abyssopelagic (4000-6000m)', 'Hadopelagic (>6000m)'],
+                type: 'pie',
+                marker: {
+                    colors: ['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3']
+                },
+                textinfo: 'label+percent',
+                insidetextorientation: 'radial'
+            }
+        ];
+        
+        const depthZonesLayout = {
+            margin: { t: 0, b: 0, l: 0, r: 0 },
+            showlegend: false,
+            height: 300
+        };
+        
+        Plotly.newPlot('depthZonesChart', depthZonesData, depthZonesLayout, {responsive: true});
+        
+        // Diversity Metrics
+        const diversityMetrics = {
+            'shannon': {
+                value: {{ diversity_metrics.shannon }},
+                description: 'The Shannon diversity index value of {{ diversity_metrics.shannon }} indicates {{ "a relatively high" if diversity_metrics.shannon > 3 else "a moderate" if diversity_metrics.shannon > 1.5 else "a low" }} diversity in this sample. This suggests {{ "a rich and varied community of species with a balanced distribution" if diversity_metrics.shannon > 3 else "a moderately diverse community with some dominant species" if diversity_metrics.shannon > 1.5 else "a community dominated by a few species" }}.',
+                name: 'Shannon Diversity Index'
+            },
+            'simpson': {
+                value: {{ diversity_metrics.simpson }},
+                description: 'The Simpson diversity index value of {{ diversity_metrics.simpson }} indicates {{ "high" if diversity_metrics.simpson > 0.7 else "moderate" if diversity_metrics.simpson > 0.4 else "low" }} diversity. This means {{ "there is a high probability that two randomly selected individuals will belong to different species" if diversity_metrics.simpson > 0.7 else "there is a moderate probability that two randomly selected individuals will belong to different species" if diversity_metrics.simpson > 0.4 else "there is a low probability that two randomly selected individuals will belong to different species" }}.',
+                name: 'Simpson Diversity Index'
+            },
+            'chao1': {
+                value: {{ diversity_metrics.chao1 }},
+                description: 'The Chao1 richness estimator value of {{ diversity_metrics.chao1 }} suggests that the true number of species in this environment is likely around {{ diversity_metrics.chao1 }}. This is {{ "higher than" if diversity_metrics.chao1 > analysis.unique_taxa else "similar to" if diversity_metrics.chao1 - analysis.unique_taxa < 10 else "lower than" }} the observed number of unique taxa ({{ analysis.unique_taxa }}).',
+                name: 'Chao1 Richness Estimator'
+            },
+            'evenness': {
+                value: {{ diversity_metrics.evenness }},
+                description: 'The Pielou\'s evenness value of {{ diversity_metrics.evenness }} indicates {{ "a very even distribution" if diversity_metrics.evenness > 0.8 else "a moderately even distribution" if diversity_metrics.evenness > 0.5 else "an uneven distribution" }} of species. This suggests that {{ "species are present in similar abundances" if diversity_metrics.evenness > 0.8 else "some species are more abundant than others, but there is no extreme dominance" if diversity_metrics.evenness > 0.5 else "a few species dominate the community" }}.',
+                name: 'Pielou\'s Evenness'
+            }
+        };
+        
+        // Update diversity metric display when selection changes
+        document.getElementById('abundanceMetric').addEventListener('change', function() {
+            const metric = this.value;
+            const metricData = diversityMetrics[metric];
+            
+            document.getElementById('diversityMetricValue').innerHTML = `
+                <div class="display-4 fw-bold">${metricData.value.toFixed(2)}</div>
+                <div class="text-muted">${metricData.name}</div>
+            `;
+            
+            document.getElementById('diversityInterpretation').innerHTML = `
+                <p>${metricData.description}</p>
+            `;
+        });
+        
+        // Search functionality for taxonomy table
+        document.getElementById('taxonomySearch').addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            const table = document.getElementById('taxonomyTable');
+            const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const taxonName = rows[i].getElementsByClassName('taxon-name')[0].textContent.toLowerCase();
+                if (taxonName.includes(searchTerm)) {
+                    rows[i].style.display = '';
+                } else {
+                    rows[i].style.display = 'none';
+                }
+            }
+        });
+        {% endif %}
+        
+        {% if analysis.status == 'running' %}
+        // Auto-refresh for running analysis
+        setTimeout(function() {
+            window.location.reload();
+        }, 10000); // Refresh every 10 seconds
+        {% endif %}
+    });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Log styling */
+    .log-entry {
+        margin-bottom: 2px;
+        font-size: 0.85rem;
+        line-height: 1.4;
+    }
+    
+    .log-timestamp {
+        margin-right: 8px;
+    }
+    
+    .log-level {
+        display: inline-block;
+        padding: 0 5px;
+        border-radius: 3px;
+        margin-right: 8px;
+        font-weight: bold;
+    }
+    
+    .log-level.info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .log-level.warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .log-level.error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .log-level.debug {
+        background-color: #e2e3e5;
+        color: #383d41;
+    }
+    
+    /* Taxonomy table styling */
+    #taxonomyTable {
+        font-size: 0.9rem;
+    }
+    
+    /* Depth chart styling */
+    #depthDistributionChart .modebar {
+        margin-top: 10px;
+    }
+</style>
+{% endblock %}

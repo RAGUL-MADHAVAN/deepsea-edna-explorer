@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Upload Sample{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder me-1"></i>{{ project.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-upload me-1"></i>Upload Sample</li>
+            </ol>
+        </nav>
+        <h1 class="display-5 fw-bold text-primary"><i class="fas fa-vial me-2"></i>Upload Sample</h1>
+        <p class="lead">Upload eDNA sequence data for analysis in project: <strong class="text-primary">{{ project.title }}</strong></p>
+        <div class="ocean-divider mb-4"></div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card ocean-card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-upload me-2"></i>Upload eDNA Sample</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('upload_sample', project_id=project.id) }}" enctype="multipart/form-data" id="sampleUploadForm">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label"><i class="fas fa-tag me-2 text-primary"></i>Sample Name*</label>
+                        {{ form.name(class="form-control ocean-input", placeholder="Enter a descriptive name for your sample") }}
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.name.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label"><i class="fas fa-align-left me-2 text-primary"></i>Sample Description</label>
+                        {{ form.description(class="form-control ocean-input", rows=3, placeholder="Describe the sample collection details, conditions, etc.") }}
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.description.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="collection_date" class="form-label"><i class="fas fa-calendar me-2 text-primary"></i>Collection Date</label>
+                        {{ form.collection_date(class="form-control ocean-input", type="date") }}
+                        {% if form.collection_date.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.collection_date.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="location" class="form-label"><i class="fas fa-map-marker-alt me-2 text-primary"></i>Collection Location</label>
+                        {{ form.location(class="form-control ocean-input", placeholder="GPS coordinates or location description") }}
+                        {% if form.location.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.location.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="collection_date" class="form-label">Collection Date</label>
+                        {{ form.collection_date(class="form-control", type="date") }}
+                        {% if form.collection_date.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.collection_date.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Collection Location</label>
+                        {{ form.location(class="form-control", placeholder="e.g., Mariana Trench, North Atlantic, etc.") }}
+                        {% if form.location.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.location.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="depth" class="form-label">Collection Depth (m)</label>
+                        {{ form.depth(class="form-control", placeholder="e.g., 1500") }}
+                        {% if form.depth.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.depth.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="sample_type" class="form-label">Sample Type*</label>
+                        {{ form.sample_type(class="form-select") }}
+                        {% if form.sample_type.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.sample_type.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Sequence File*</label>
+                        <div class="input-group">
+                            {{ form.file(class="form-control", accept=".fasta,.fastq,.fa,.fq") }}
+                        </div>
+                        <div class="form-text">Accepted formats: FASTA (.fasta, .fa) or FASTQ (.fastq, .fq)</div>
+                        {% if form.file.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.file.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="metadata_file" class="form-label">Metadata File (Optional)</label>
+                        <div class="input-group">
+                            {{ form.metadata_file(class="form-control", accept=".txt,.csv,.tsv") }}
+                        </div>
+                        <div class="form-text">Accepted formats: TXT, CSV, TSV</div>
+                        {% if form.metadata_file.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.metadata_file.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.run_analysis(class="form-check-input") }}
+                            <label class="form-check-label" for="run_analysis">
+                                Run analysis immediately after upload
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="analysisOptions" class="mb-3 ps-4 border-start" style="display: none;">
+                        <div class="mb-3">
+                            <label for="analysis_type" class="form-label">Analysis Type</label>
+                            {{ form.analysis_type(class="form-select") }}
+                            {% if form.analysis_type.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.analysis_type.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="preprocessing_options" class="form-label">Preprocessing Options</label>
+                            <div class="form-check">
+                                {{ form.quality_filtering(class="form-check-input") }}
+                                <label class="form-check-label" for="quality_filtering">
+                                    Quality filtering
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                {{ form.adapter_trimming(class="form-check-input") }}
+                                <label class="form-check-label" for="adapter_trimming">
+                                    Adapter trimming
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                {{ form.length_filtering(class="form-check-input") }}
+                                <label class="form-check-label" for="length_filtering">
+                                    Length filtering
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="classification_model" class="form-label">Classification Model</label>
+                            {{ form.classification_model(class="form-select") }}
+                            {% if form.classification_model.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.classification_model.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="confidence_threshold" class="form-label">Confidence Threshold</label>
+                            <div class="d-flex align-items-center">
+                                <input type="range" class="form-range flex-grow-1 me-2" id="confidenceSlider" min="0" max="100" value="60">
+                                {{ form.confidence_threshold(class="form-control", style="width: 80px;") }}
+                                <span class="ms-1">%</span>
+                            </div>
+                            {% if form.confidence_threshold.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.confidence_threshold.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Upload Sample
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Upload Guidelines</h5>
+            </div>
+            <div class="card-body">
+                <p>For optimal analysis results, please follow these guidelines:</p>
+                <ul class="mb-0">
+                    <li>Use FASTA or FASTQ format for sequence files</li>
+                    <li>Ensure sequences are properly formatted</li>
+                    <li>Include metadata when available for richer analysis</li>
+                    <li>Provide accurate collection information</li>
+                    <li>Larger files (>100MB) may take longer to upload</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Analysis Options</h5>
+            </div>
+            <div class="card-body">
+                <p>The DeepSea eDNA Explorer pipeline includes:</p>
+                <ol class="mb-0">
+                    <li><strong>Preprocessing:</strong> Quality filtering, adapter trimming, and length filtering</li>
+                    <li><strong>Classification:</strong> Deep learning-based taxonomic classification</li>
+                    <li><strong>Annotation:</strong> Detailed taxonomic annotation</li>
+                    <li><strong>Abundance Estimation:</strong> Relative abundance calculation</li>
+                    <li><strong>Visualization:</strong> Interactive charts and reports</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-flask me-2"></i>Sample Examples</h5>
+            </div>
+            <div class="card-body">
+                <p>Not sure what to upload? Try one of our example files:</p>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('download_example_file', filename='deep_sea_sample.fasta') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-download me-1"></i>Deep Sea Sample (FASTA)
+                    </a>
+                    <a href="{{ url_for('download_example_file', filename='metadata.txt') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-download me-1"></i>Sample Metadata (TXT)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Toggle analysis options based on checkbox
+    document.addEventListener('DOMContentLoaded', function() {
+        const runAnalysisCheckbox = document.getElementById('run_analysis');
+        const analysisOptions = document.getElementById('analysisOptions');
+        
+        function toggleAnalysisOptions() {
+            if (runAnalysisCheckbox.checked) {
+                analysisOptions.style.display = 'block';
+            } else {
+                analysisOptions.style.display = 'none';
+            }
+        }
+        
+        runAnalysisCheckbox.addEventListener('change', toggleAnalysisOptions);
+        toggleAnalysisOptions(); // Initial state
+        
+        // Sync range slider with input field
+        const confidenceSlider = document.getElementById('confidenceSlider');
+        const confidenceInput = document.getElementById('confidence_threshold');
+        
+        confidenceSlider.addEventListener('input', function() {
+            confidenceInput.value = this.value;
+        });
+        
+        confidenceInput.addEventListener('input', function() {
+            confidenceSlider.value = this.value;
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Language Settings{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('profile') }}" class="text-primary"><i class="fas fa-user me-1"></i>Profile</a></li>
+                <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-language me-1"></i>Language Settings</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="display-5 fw-bold text-primary"><i class="fas fa-language me-2"></i>Language Settings</h1>
+        <p class="lead">Customize your language preferences for the DeepSea eDNA Explorer platform.</p>
+        <div class="ocean-divider mb-4"></div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card ocean-card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-globe me-2"></i>Interface Language</h5>
+            </div>
+            <div class="card-body">
+                <p>Select your preferred language for the user interface. This will change menus, buttons, and system messages.</p>
+                
+                <form id="languageForm">
+                    <div class="row g-3">
+                        {% for language in ['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Portuguese', 'Russian', 'Arabic'] %}
+                        <div class="col-md-4 col-sm-6">
+                            <div class="card h-100 {% if language == 'English' %}border-primary{% endif %}">
+                                <div class="card-body p-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="language" id="lang{{ loop.index }}" value="{{ language.lower() }}" {% if language == 'English' %}checked{% endif %}>
+                                        <label class="form-check-label w-100" for="lang{{ loop.index }}">
+                                            <div class="d-flex align-items-center">
+                                                <div class="language-flag me-2">
+                                                    <img src="{{ url_for('static', filename='img/flags/' + language.lower() + '.png') }}" alt="{{ language }} flag" width="24" height="18">
+                                                </div>
+                                                <span>{{ language }}</span>
+                                                {% if language == 'English' %}
+                                                <span class="badge bg-primary ms-auto">Current</span>
+                                                {% endif %}
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn ocean-button">
+                            <i class="fas fa-save me-1"></i>Save Language Preference
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card ocean-card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Content Translation</h5>
+            </div>
+            <div class="card-body">
+                <p>Choose how you want project content and research data to be translated.</p>
+                
+                <form id="translationForm">
+                    <div class="mb-3">
+                        <label for="autoTranslate" class="form-label">Automatic Translation</label>
+                        <select class="form-select ocean-input" id="autoTranslate">
+                            <option value="always">Always translate content to my language</option>
+                            <option value="ask" selected>Ask before translating content</option>
+                            <option value="never">Never translate automatically</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="translationQuality" class="form-label">Translation Quality</label>
+                        <select class="form-select ocean-input" id="translationQuality">
+                            <option value="fast">Fast (machine translation)</option>
+                            <option value="balanced" selected>Balanced (machine with scientific term verification)</option>
+                            <option value="high">High (professional translation - may delay content delivery)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="preserveScientificTerms" checked>
+                            <label class="form-check-label" for="preserveScientificTerms">
+                                Preserve scientific terminology in original language
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showOriginalOnHover" checked>
+                            <label class="form-check-label" for="showOriginalOnHover">
+                                Show original text on hover
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="submit" class="btn ocean-button">
+                            <i class="fas fa-save me-1"></i>Save Translation Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card ocean-card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Language Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb me-2"></i>Your language settings affect only your account and don't change how others see the platform.
+                </div>
+                
+                <h6 class="mt-4">Currently Supported Features:</h6>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        User Interface
+                        <span class="badge bg-success rounded-pill">100%</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        System Messages
+                        <span class="badge bg-success rounded-pill">100%</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Project Content
+                        <span class="badge bg-warning rounded-pill">85%</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Scientific Reports
+                        <span class="badge bg-warning rounded-pill">80%</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Help Documentation
+                        <span class="badge bg-info rounded-pill">90%</span>
+                    </li>
+                </ul>
+                
+                <h6>Translation Powered By:</h6>
+                <div class="d-flex align-items-center mt-2">
+                    <i class="fas fa-robot text-primary me-2 fa-2x"></i>
+                    <div>
+                        <h6 class="mb-0">DeepSea AI Translation</h6>
+                        <small class="text-muted">Specialized in scientific terminology</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card ocean-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-hands-helping me-2"></i>Help Improve Translations</h5>
+            </div>
+            <div class="card-body">
+                <p>Help us improve translations for the scientific community by contributing to our language database.</p>
+                
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i>Suggest Translation Improvements
+                    </button>
+                    <button type="button" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-1"></i>Add Scientific Terms
+                    </button>
+                </div>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <p class="mb-2"><strong>Your Contribution Level</strong></p>
+                    <div class="avatar-bubble mx-auto mb-2" style="width: 60px; height: 60px;">
+                        <i class="fas fa-star fa-2x text-warning"></i>
+                    </div>
+                    <h5>Silver Translator</h5>
+                    <div class="progress mb-2" style="height: 10px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: 65%" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small class="text-muted">65/100 points to Gold level</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="previewModalLabel"><i class="fas fa-eye me-2"></i>Language Preview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    This is a preview of how the interface will look in your selected language.
+                </div>
+                
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 id="previewHeader">Dashboard</h5>
+                    </div>
+                    <div class="card-body">
+                        <h4 id="previewTitle">Welcome to DeepSea eDNA Explorer</h4>
+                        <p id="previewText">Your research dashboard provides an overview of your projects, samples, and analyses. Click on any card to view more details or manage your research data.</p>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <button type="button" class="btn btn-primary mb-2 w-100" id="previewButton1">View Projects</button>
+                            </div>
+                            <div class="col-md-6">
+                                <button type="button" class="btn btn-outline-primary mb-2 w-100" id="previewButton2">Upload New Sample</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="confirmLanguage">
+                    <label class="form-check-label" for="confirmLanguage">
+                        I confirm this language is readable and I want to set it as my default
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn ocean-button" id="confirmLanguageBtn" disabled>Confirm Language</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .language-flag img {
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    
+    .card:has(.form-check-input:checked) {
+        border-color: #0d6efd;
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+    
+    .form-check-label {
+        cursor: pointer;
+    }
+</style>
+
+<script>
+    // This would be implemented in a separate JS file
+    document.addEventListener('DOMContentLoaded', function() {
+        // Preview language change
+        const languageRadios = document.querySelectorAll('input[name="language"]');
+        const previewBtn = document.createElement('button');
+        previewBtn.className = 'btn btn-sm btn-outline-primary mt-2';
+        previewBtn.innerHTML = '<i class="fas fa-eye me-1"></i>Preview';
+        previewBtn.setAttribute('data-bs-toggle', 'modal');
+        previewBtn.setAttribute('data-bs-target', '#previewModal');
+        
+        languageRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.querySelectorAll('.card:has(.form-check-input)').forEach(card => {
+                    card.classList.remove('border-primary');
+                    card.querySelector('.badge')?.remove();
+                });
+                
+                const parentCard = this.closest('.card');
+                parentCard.classList.add('border-primary');
+                
+                const label = this.closest('label');
+                if (!label.querySelector('.badge')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary ms-auto';
+                    badge.textContent = 'Selected';
+                    label.querySelector('div').appendChild(badge);
+                }
+                
+                // Add preview button if not exists
+                if (!parentCard.querySelector('.preview-btn')) {
+                    const previewBtnClone = previewBtn.cloneNode(true);
+                    previewBtnClone.classList.add('preview-btn');
+                    parentCard.querySelector('.card-body').appendChild(previewBtnClone);
+                }
+            });
+        });
+        
+        // Enable confirm button when checkbox is checked
+        document.getElementById('confirmLanguage').addEventListener('change', function() {
+            document.getElementById('confirmLanguageBtn').disabled = !this.checked;
+        });
+    });
+</script>
+{% endblock %}
