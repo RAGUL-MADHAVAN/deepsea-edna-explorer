@@ -1,0 +1,32 @@
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Flask / instance / uploads
+instance/
+web/uploads/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs / runtime artifacts
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Optional: keep generated outputs out of git
+results/
+reports/

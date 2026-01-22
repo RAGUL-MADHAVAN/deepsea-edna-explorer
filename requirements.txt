@@ -1,0 +1,41 @@
+# Core dependencies
+numpy>=1.20.0
+pandas>=1.3.0
+scipy>=1.7.0
+scikit-learn>=1.0.0
+biopython>=1.79
+
+# Deep learning frameworks
+torch>=1.10.0
+torchvision>=0.11.0
+tensorflow>=2.8.0
+keras>=2.8.0
+
+# Sequence analysis
+# biosequences>=0.4.0  # Commented out due to installation issues
+# bioinfokit>=2.0.0  # Commented out due to installation issues
+
+# Data processing and visualization
+matplotlib>=3.5.0
+seaborn>=0.11.2
+plotly>=5.5.0
+
+# Bioinformatics tools
+# qiime2>=2022.2.0  # Commented out due to installation issues
+# dada2>=1.20.0  # Commented out due to installation issues
+
+# Machine learning utilities
+# scikit-bio>=0.5.7  # Commented out due to installation issues
+umap-learn>=0.5.2
+hdbscan>=0.8.28
+
+# Utilities
+tqdm>=4.62.0
+joblib>=1.1.0
+click>=8.0.0
+loguru>=0.6.0
+
+# Development tools
+pytest>=7.0.0
+black>=22.1.0
+flake8>=4.0.0
