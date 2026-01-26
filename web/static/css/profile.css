@@ -76,24 +76,30 @@
 
 /* Profile Navigation */
 .profile-nav .nav-link {
-    color: var(--ocean-dark);
+    color: #053b50; /* high-contrast dark teal */
     border-left: 3px solid transparent;
     border-radius: 0;
     padding: 0.75rem 1rem;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    opacity: 1; /* ensure always visible */
 }
 
-.profile-nav .nav-link:hover {
-    background-color: rgba(var(--ocean-light-rgb), 0.1);
-    border-left-color: var(--ocean-medium);
+.profile-nav .nav-link:hover,
+.profile-nav .nav-link:focus {
+    background-color: #e8f3f7; /* light background for hover/focus */
+    border-left-color: #0a4d68; /* visible indicator */
+    color: #053b50;
+    outline: 2px solid #9fd3c7; /* accessible focus outline */
+    outline-offset: 2px;
 }
 
 .profile-nav .nav-link.active {
-    color: var(--ocean-deep);
-    background-color: rgba(var(--ocean-light-rgb), 0.2);
-    border-left-color: var(--ocean-deep);
-    font-weight: 500;
+    color: #0a4d68; /* emphasized active color */
+    background-color: #dff1f7;
+    border-left-color: #0a4d68;
+    font-weight: 600;
 }
+/* cleaned duplicate legacy styles */
 
 /* Timeline for Education and Experience */
 .timeline {
@@ -199,4 +205,27 @@
         text-align: center !important;
         margin-top: 1.5rem;
     }
+}
+
+/* Ensure disabled form fields are clearly visible */
+.form-control[disabled],
+.form-select[disabled],
+textarea[disabled] {
+    color: #053b50;
+    background-color: #f9fbfc;
+    opacity: 1;
+}
+
+/* Make labels and general text in profile sections dark for readability */
+.ocean-card .card-body label,
+.ocean-card .card-body,
+.ocean-card .card-body p {
+    color: #053b50;
+}
+
+/* Simple pill label replacing Bootstrap badge for readability */
+.label-pill {
+    display: inline-block;
+    font-size: 0.85rem;
+    border-radius: 999px;
 }

@@ -359,3 +359,10 @@
         flex: 1 0 100%;
     }
 }
+
+/* Ensure assistant message text is dark and readable */
+.assistant-message .message-text,
+.assistant-message .message-text p,
+.assistant-message .message-text li {
+    color: #053b50;
+}

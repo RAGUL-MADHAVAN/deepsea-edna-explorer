@@ -15,6 +15,9 @@ from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
+# Mongo client
+from app import mongo
+
 # Import models
 from models import db, User, Project, Sample, Analysis, Notification, Badge, UserBadge, Comment
 
@@ -69,9 +72,22 @@ def register_routes(app):
             email = request.form.get('email')
             password = request.form.get('password')
             
-            user = User.query.filter_by(email=email).first()
+            # Authenticate against MongoDB
+            user_doc = mongo.db.users.find_one({'email': email})
             
-            if user and check_password_hash(user.password_hash, password):
+            if user_doc and check_password_hash(user_doc.get('password_hash', ''), password):
+                # Ensure SQLAlchemy user exists for relationships and session
+                user = User.query.filter_by(email=email).first()
+                if not user:
+                    user = User(
+                        name=user_doc.get('name'),
+                        email=user_doc.get('email'),
+                        username=user_doc.get('username'),
+                        institution=user_doc.get('institution'),
+                        password_hash=user_doc.get('password_hash', '')
+                    )
+                    db.session.add(user)
+                    db.session.commit()
                 login_user(user)
                 user.last_login = datetime.utcnow()
                 db.session.commit()
@@ -100,22 +116,37 @@ def register_routes(app):
                 flash('Passwords do not match', 'danger')
                 return render_template('signup.html')
                 
-            existing_user = User.query.filter((User.email == email) | (User.username == username)).first()
+            # Check uniqueness using MongoDB
+            existing_user = mongo.db.users.find_one({'$or': [{'email': email}, {'username': username}]})
             if existing_user:
                 flash('Email or username already exists', 'danger')
                 return render_template('signup.html')
             
-            # Create new user
-            new_user = User(
-                name=name,
-                email=email,
-                username=username,
-                institution=institution,
-                password_hash=generate_password_hash(password)
-            )
+            # Hash password securely
+            password_hash = generate_password_hash(password)
             
-            db.session.add(new_user)
-            db.session.commit()
+            # Store user in MongoDB (source of truth)
+            mongo.db.users.insert_one({
+                'name': name,
+                'email': email,
+                'username': username,
+                'institution': institution,
+                'password_hash': password_hash,
+                'created_at': datetime.utcnow()
+            })
+            
+            # Create or sync SQLAlchemy user for app relations
+            sql_user = User.query.filter_by(email=email).first()
+            if not sql_user:
+                sql_user = User(
+                    name=name,
+                    email=email,
+                    username=username,
+                    institution=institution,
+                    password_hash=password_hash
+                )
+                db.session.add(sql_user)
+                db.session.commit()
             
             flash('Account created successfully! Please login.', 'success')
             return redirect(url_for('login'))
@@ -190,58 +221,8 @@ def register_routes(app):
     @app.route('/gamification')
     @login_required
     def gamification():
-        # In a real implementation, these would be retrieved from the database
-        # Mock data for demonstration
-        researcher_level = {
-            'level': 12,
-            'rank': 'Marine Biologist',
-            'xp': 1250,
-            'next_level': 1500,
-            'progress': 83  # Percentage to next level
-        }
-        
-        statistics = {
-            'projects_created': 24,
-            'samples_analyzed': 156,
-            'visualizations': 42,
-            'collaborations': 8,
-            'reports': 18
-        }
-        
-        badges = {
-            'earned': [
-                {'name': 'First Project', 'icon': 'fa-flask', 'description': 'Created your first research project'},
-                {'name': 'Data Explorer', 'icon': 'fa-chart-line', 'description': 'Analyzed 100+ samples'},
-                {'name': 'Collaborator', 'icon': 'fa-users', 'description': 'Participated in 5+ collaborative projects'}
-            ],
-            'available': [
-                {'name': 'Publication Star', 'icon': 'fa-star', 'description': 'Publish 5 research papers', 'progress': 60},
-                {'name': 'Method Master', 'icon': 'fa-microscope', 'description': 'Use 10 different analysis methods', 'progress': 70},
-                {'name': 'Species Expert', 'icon': 'fa-fish', 'description': 'Identify 50 different species', 'progress': 30}
-            ]
-        }
-        
-        leaderboard = [
-            {'rank': 1, 'name': 'Dr. Jane Smith', 'level': 24, 'xp': 5840, 'badges': 18, 'top_achievement': 'Research Pioneer'},
-            {'rank': 2, 'name': 'Prof. Michael Chen', 'level': 22, 'xp': 5210, 'badges': 16, 'top_achievement': 'Data Virtuoso'},
-            {'rank': 3, 'name': current_user.name, 'level': 12, 'xp': 1250, 'badges': 8, 'top_achievement': 'Collaborator'},
-            {'rank': 4, 'name': 'Dr. Sarah Johnson', 'level': 10, 'xp': 980, 'badges': 7, 'top_achievement': 'Method Master'},
-            {'rank': 5, 'name': 'Alex Rodriguez', 'level': 8, 'xp': 780, 'badges': 5, 'top_achievement': 'Data Explorer'}
-        ]
-        
-        challenges = [
-            {'name': 'Analyze 5 new samples', 'reward': '50 XP', 'deadline': 'Today', 'progress': 60},
-            {'name': 'Collaborate on a project', 'reward': '100 XP', 'deadline': 'This week', 'progress': 0},
-            {'name': 'Create a visualization', 'reward': '75 XP', 'deadline': 'This week', 'progress': 30}
-        ]
-        
-        return render_template('gamification.html',
-                              user=current_user,
-                              researcher_level=researcher_level,
-                              statistics=statistics,
-                              badges=badges,
-                              leaderboard=leaderboard,
-                              challenges=challenges)
+        flash('Gamification features have been removed to maintain a strictly scientific interface.', 'info')
+        return redirect(url_for('dashboard'))
     
     # 2. Researcher Profile Section
     @app.route('/profile')
@@ -275,7 +256,19 @@ def register_routes(app):
             current_user.contact_email = request.form.get('contact_email')
             current_user.website = request.form.get('website')
             current_user.orcid = request.form.get('orcid')
-            
+
+            # Prepare MongoDB update payload
+            user_update = {
+                'name': request.form.get('name'),
+                'institution': request.form.get('institution'),
+                'research_interests': request.form.get('research_interests'),
+                'position': request.form.get('position'),
+                'department': request.form.get('department'),
+                'biography': request.form.get('biography'),
+                'contact_email': request.form.get('contact_email'),
+                'website': request.form.get('website'),
+                'orcid_id': request.form.get('orcid'),
+            }
             # Handle profile picture upload
             if 'profile_picture' in request.files:
                 file = request.files['profile_picture']
@@ -285,6 +278,14 @@ def register_routes(app):
                     os.makedirs(os.path.dirname(file_path), exist_ok=True)
                     file.save(file_path)
                     current_user.profile_picture = os.path.join('profile_pictures', filename)
+                    # Also update MongoDB profile picture path
+                    user_update['profile_picture'] = current_user.profile_picture
+            
+            # Persist non-password fields to MongoDB
+            try:
+                mongo.db.users.update_one({'email': current_user.email}, {'$set': user_update})
+            except Exception as e:
+                app.logger.error(f"MongoDB update failed: {e}")
             
             # Handle password change
             current_password = request.form.get('current_password')
@@ -292,12 +293,18 @@ def register_routes(app):
             confirm_password = request.form.get('confirm_password')
             
             if current_password and new_password and confirm_password:
-                # Verify current password
-                if check_password_hash(current_user.password_hash, current_password):
+                # Verify current password against MongoDB (source of truth)
+                user_doc = mongo.db.users.find_one({'email': current_user.email})
+                if user_doc and check_password_hash(user_doc.get('password_hash', ''), current_password):
                     # Check if new passwords match
                     if new_password == confirm_password:
-                        # Update password
-                        current_user.password_hash = generate_password_hash(new_password)
+                        # Update password in both MongoDB and SQLAlchemy
+                        new_hash = generate_password_hash(new_password)
+                        current_user.password_hash = new_hash
+                        try:
+                            mongo.db.users.update_one({'email': current_user.email}, {'$set': {'password_hash': new_hash}})
+                        except Exception as e:
+                            app.logger.error(f"MongoDB password update failed: {e}")
                         flash('Password updated successfully', 'success')
                     else:
                         flash('New passwords do not match', 'danger')
@@ -332,6 +339,12 @@ def register_routes(app):
             # Update user profile picture in database
             current_user.profile_picture = os.path.join('profile_pictures', filename)
             db.session.commit()
+            
+            # Also update MongoDB profile picture
+            try:
+                mongo.db.users.update_one({'email': current_user.email}, {'$set': {'profile_picture': current_user.profile_picture}})
+            except Exception as e:
+                app.logger.error(f"MongoDB profile picture update failed: {e}")
             
             # Return success with image URL
             image_url = url_for('static', filename=f'uploads/profile_pictures/{filename}')
@@ -1128,12 +1141,8 @@ def register_routes(app):
     @app.route('/badges')
     @login_required
     def badges():
-        user_badges = UserBadge.query.filter_by(user_id=current_user.id).all()
-        all_badges = Badge.query.all()
-        
-        return render_template('badges.html', 
-                              user_badges=user_badges, 
-                              all_badges=all_badges)
+        flash('Badges feature has been removed.', 'info')
+        return redirect(url_for('dashboard'))
     
     @app.route('/language/<lang>')
     def set_language(lang):

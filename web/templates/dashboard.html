@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid py-5">
     <!-- Ocean-themed header with animated waves -->
-    <div class="ocean-header mb-5">
+    <div class="ocean-header mb-5" style="background: linear-gradient(135deg, #0a4d68 0%, #088395 100%); border-radius: 12px; padding: 2rem;">
         <div class="ocean-header-content">
             <h1 class="display-4 fw-bold text-white"><i class="fas fa-water me-3"></i>DeepSea Explorer</h1>
             <p class="lead text-white">Welcome, {{ current_user.name }}! Dive into your marine research dashboard</p>
@@ -15,8 +15,8 @@
     
     <div class="row mb-4">
         <div class="col-12 text-center">
-            <h2 class="display-5 fw-bold text-primary"><i class="fas fa-tachometer-alt me-3"></i>Researcher Dashboard</h2>
-            <p class="lead">Your DeepSea eDNA Explorer dashboard provides an overview of your research activities.</p>
+            <h2 class="display-5 fw-bold" style="color:#0a4d68;"><i class="fas fa-tachometer-alt me-3"></i>Researcher Dashboard</h2>
+            <p class="lead" style="color:#053b50;">Your DeepSea eDNA Explorer dashboard provides an overview of your research activities.</p>
             <div class="ocean-divider mx-auto mb-4"></div>
         </div>
     </div>
@@ -253,35 +253,9 @@
         </div>
         
         <!-- Badges Progress -->
-        <div class="card mb-4 ocean-card">
-            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-award me-2"></i>Badges Progress</h5>
-                <a href="{{ url_for('badges') }}" class="btn btn-sm btn-outline-light ocean-button-sm">
-                    View All
-                </a>
-            </div>
-            <div class="card-body">
-                {% if current_user.badges %}
-                <div class="row">
-                    {% for user_badge in current_user.badges[:6] %}
-                    <div class="col-md-4 col-6 text-center mb-3">
-                        <div class="badge-icon ocean-badge">
-                            <i class="{{ user_badge.badge.icon }} fa-2x text-primary"></i>
-                        </div>
-                        <div class="badge-name small mt-1 text-primary">{{ user_badge.badge.name }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="text-center py-3">
-                    <p class="mb-0">Complete analyses to earn badges!</p>
-                    <div class="progress mt-3" style="height: 10px; border-radius: 5px; overflow: hidden;">
-                        <div class="progress-bar bg-primary progress-bar-animated progress-bar-striped" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
+        <!-- Removed to make interface strictly scientific -->
+        
+        <!-- Badges feature removed for scientific interface -->
     </div>
 </div>
 
@@ -293,34 +267,34 @@
                 <h5 class="mb-0"><i class="fas fa-star me-2"></i>Featured Resources</h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4 mb-3 mb-md-0">
+                <div class="row" role="list" aria-label="Featured learning resources">
+                    <div class="col-md-4 mb-3 mb-md-0" role="listitem">
                         <div class="card h-100 ocean-card">
-                            <img src="https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Tutorial">
+                            <img src="{{ url_for('static', filename='img/demo/getting_started_edna.svg') }}" class="card-img-top" alt="Getting Started with the DeepSea eDNA Explorer tutorial cover" />
                             <div class="card-body">
                                 <h5 class="card-title text-primary">Getting Started Tutorial</h5>
-                                <p class="card-text">Learn how to use DeepSea eDNA Explorer for your research.</p>
-                                <a href="#" class="btn btn-sm ocean-button-sm">View Tutorial</a>
+                                <p class="card-text">Step-by-step guide to using DeepSea eDNA Explorer for your research workflows.</p>
+                                <a href="{{ url_for('ai_assistant') }}" class="btn btn-sm ocean-button-sm" aria-label="Open in-app tutorial using AI Assistant">View Tutorial</a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3 mb-md-0">
+                    <div class="col-md-4 mb-3 mb-md-0" role="listitem">
                         <div class="card h-100 ocean-card">
-                            <img src="https://images.unsplash.com/photo-1581093196277-9f608bb3d4b9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Webinar">
+                            <img src="{{ url_for('static', filename='img/demo/webinar_overview.svg') }}" class="card-img-top" alt="Illustration of eDNA webinar visualization" />
                             <div class="card-body">
                                 <h5 class="card-title text-primary">Upcoming Webinar</h5>
-                                <p class="card-text">Join our webinar on advanced eDNA analysis techniques.</p>
-                                <a href="#" class="btn btn-sm ocean-button-sm">Register Now</a>
+                                <p class="card-text">Learn advanced eDNA analysis concepts and best practices.</p>
+                                <a href="https://www.aoml.noaa.gov/exploring-environmental-dna/" target="_blank" rel="noopener" class="btn btn-sm ocean-button-sm" aria-label="Open NOAA AOML eDNA educational series in a new tab">Register Now</a>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-4" role="listitem">
                         <div class="card h-100 ocean-card">
-                            <img src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=500&q=80" class="card-img-top" alt="Publication">
+                            <img src="{{ url_for('static', filename='img/demo/latest_research_edna.svg') }}" class="card-img-top" alt="Laboratory glassware and DNA icon representing latest eDNA research" />
                             <div class="card-body">
                                 <h5 class="card-title text-primary">Latest Research</h5>
-                                <p class="card-text">Read the latest publications using our platform.</p>
-                                <a href="#" class="btn btn-sm ocean-button-sm">Explore Research</a>
+                                <p class="card-text">Explore current eDNA publications and NOAA studies.</p>
+                                <a href="https://oceanexplorer.noaa.gov/technology/edna/" target="_blank" rel="noopener" class="btn btn-sm ocean-button-sm" aria-label="Open NOAA Ocean Exploration environmental DNA overview in a new tab">Explore Research</a>
                             </div>
                         </div>
                     </div>

@@ -17,6 +17,7 @@ from werkzeug.utils import secure_filename
 import datetime
 import json
 import sys
+from flask_pymongo import PyMongo
 
 # Add the project root directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -35,6 +36,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///deepsea_edna.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max upload size
+# MongoDB configuration (use environment variable if available)
+app.config['MONGO_URI'] = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/deepsea_edna')
+# Initialize Mongo client
+mongo = PyMongo(app)
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

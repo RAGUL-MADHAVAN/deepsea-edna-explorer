@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" role="img" aria-labelledby="title desc">
+  <title id="title">eDNA Webinar Overview</title>
+  <desc id="desc">Stylized chart and laptop representing an educational webinar on environmental DNA.</desc>
+  <defs>
+    <linearGradient id="banner" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1d7ea8"/>
+      <stop offset="100%" stop-color="#4cc9f0"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="800" height="450" fill="#053b50"/>
+  <rect x="0" y="0" width="800" height="80" fill="url(#banner)"/>
+  <g transform="translate(80,140)">
+    <rect x="0" y="0" width="280" height="180" rx="12" fill="#ffffff"/>
+    <g transform="translate(20,24)">
+      <rect x="0" y="0" width="240" height="8" rx="4" fill="#9fd3c7"/>
+      <rect x="0" y="24" width="200" height="8" rx="4" fill="#9fd3c7"/>
+      <circle cx="20" cy="64" r="10" fill="#0a4d68"/>
+      <circle cx="80" cy="96" r="8" fill="#4cc9f0"/>
+      <circle cx="160" cy="70" r="6" fill="#1d7ea8"/>
+    </g>
+  </g>
+  <g transform="translate(420,120)">
+    <rect x="0" y="0" width="300" height="200" rx="14" fill="#1d7ea8"/>
+    <rect x="24" y="28" width="252" height="24" rx="8" fill="#e8f3f7"/>
+    <rect x="24" y="70" width="160" height="16" rx="6" fill="#9fd3c7"/>
+    <rect x="24" y="96" width="220" height="16" rx="6" fill="#9fd3c7"/>
+    <rect x="24" y="122" width="180" height="16" rx="6" fill="#9fd3c7"/>
+  </g>
+  <text x="32" y="56" font-size="26" font-family="Segoe UI, Arial" fill="#ffffff">Upcoming Webinar</text>
+  <text x="32" y="86" font-size="16" font-family="Segoe UI, Arial" fill="#e8f3f7">Advanced eDNA analysis concepts</text>
+</svg>

@@ -92,13 +92,14 @@
             font-size: 1.5rem;
         }
         
-        .nav-link {
-            color: var(--white) !important;
+        /* Limit nav-link styling to navbar only to avoid overriding in-page tabs */
+        .navbar .nav-link {
+            color: var(--white);
             transition: all 0.3s ease;
         }
         
-        .nav-link:hover {
-            color: var(--light) !important;
+        .navbar .nav-link:hover {
+            color: var(--light);
             transform: translateY(-2px);
         }
         
@@ -377,11 +378,8 @@
             }
         }
         
-        /* Badges */
-        .badge-ocean {
-            background-color: var(--accent);
-            color: var(--white);
-        }
+        /* Badges (removed) */
+        .badge-ocean { display: none; }
         
         /* Notifications */
         .notification-badge {
@@ -507,8 +505,8 @@
         }
         
         .assistant-message {
-            background-color: var(--secondary);
-            color: var(--white);
+            background-color: transparent;
+            color: inherit;
             margin-right: auto;
             border-bottom-left-radius: 0;
         }
@@ -543,11 +541,9 @@
                             <i class="fas fa-robot me-1"></i> AI Assistant
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('gamification') }}">
-                            <i class="fas fa-trophy me-1"></i> Gamification
-                        </a>
-                    </li>
+                    
+                    <!-- Gamification removed -->
+                    
                     <li class="nav-item position-relative">
                         <a class="nav-link" href="{{ url_for('notifications') }}">
                             <i class="fas fa-bell me-1"></i> Notifications
@@ -559,12 +555,13 @@
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="{{ url_for('static', filename=current_user.profile_picture) if current_user.profile_picture else 'https://via.placeholder.com/40' }}" alt="Profile" class="profile-picture-sm me-1">
                             {{ current_user.username }}
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="fas fa-user me-1"></i> Profile</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('badges') }}"><i class="fas fa-award me-1"></i> Badges</a></li>
+                            
+                            <!-- Badges removed -->
+                            
                             {% if current_user.is_admin %}
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="fas fa-cog me-1"></i> Admin</a></li>
@@ -581,18 +578,6 @@
                         <a class="nav-link" href="{{ url_for('signup') }}"><i class="fas fa-user-plus me-1"></i> Sign Up</a>
                     </li>
                     {% endif %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-globe me-1"></i> Language
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="languageDropdown">
-                            <li><a class="dropdown-item" href="{{ url_for('set_language', lang='en') }}">English</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('set_language', lang='es') }}">Español</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('set_language', lang='fr') }}">Français</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('set_language', lang='zh') }}">中文</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('set_language', lang='ja') }}">日本語</a></li>
-                        </ul>
-                    </li>
                 </ul>
             </div>
         </div>
