@@ -223,6 +223,7 @@ class Analysis(db.Model):
     analysis_type = db.Column(db.String(50), nullable=False)  # Standard, Novel Discovery, Fast Mode
     status = db.Column(db.String(20), default='pending')  # pending, processing, completed, failed
     result_path = db.Column(db.String(500))  # Path to results directory
+    results_json = db.Column(db.Text)  # JSON summary of pipeline outputs
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     error_message = db.Column(db.Text)

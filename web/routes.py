@@ -9,6 +9,8 @@ import os
 import shutil
 import json
 import uuid
+import subprocess
+import sys
 from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, send_file, send_from_directory
 from flask_login import login_user, login_required, logout_user, current_user
@@ -18,27 +20,29 @@ from werkzeug.utils import secure_filename
 # Import models
 from models import db, User, Project, Sample, Analysis, Notification, Badge, UserBadge, Comment
 
-# Import pipeline components - commented out for simplified demo
-# from src.pipeline import run_pipeline
-
-# Mock pipeline function for demo
-def mock_run_pipeline(input_file, output_dir, params=None):
-    """Mock function to simulate pipeline execution for demo purposes"""
-    return {
-        "status": "success",
-        "results": {
-            "taxonomic_classification": {"species": ["Demo Species 1", "Demo Species 2"]},
-            "abundance_estimation": {"Demo Species 1": 0.65, "Demo Species 2": 0.35},
-            "visualization_path": "static/img/demo/sample_visualization.png"
-        }
-    }
+# Pipeline execution helper (subprocess for hackathon demo)
+def run_pipeline_subprocess(input_file, output_dir, threads=2):
+    """Run the CLI pipeline in a subprocess for demo purposes."""
+    pipeline_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src', 'pipeline.py'))
+    cmd = [sys.executable, pipeline_path, '--input', input_file, '--output', output_dir, '--threads', str(threads)]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result
 
 def register_routes(app):
     # Helper functions
-    def allowed_file(filename):
-        ALLOWED_EXTENSIONS = {'fastq', 'fq', 'fasta', 'fa', 'fna', 'fastq.gz', 'fq.gz', 'fasta.gz', 'fa.gz'}
-        return '.' in filename and \
-               filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    def allowed_file(filename, allowed_exts=None):
+        allowed_exts = allowed_exts or {'fastq', 'fq', 'fasta', 'fa', 'fna', 'fastq.gz', 'fq.gz', 'fasta.gz', 'fa.gz'}
+        if '.' not in filename:
+            return False
+        lowered = filename.lower()
+        if lowered.endswith('.gz'):
+            base = lowered[:-3]
+            if '.' not in base:
+                return False
+            ext = f"{base.rsplit('.', 1)[1]}.gz"
+        else:
+            ext = lowered.rsplit('.', 1)[1]
+        return ext in allowed_exts
     
     # Example file download endpoint for templates (e.g., upload_sample.html)
     @app.route('/download-example/<path:filename>')
@@ -653,7 +657,7 @@ def register_routes(app):
                         project_id=project_id,
                         file_path=os.path.join('samples', str(project_id), filename),
                         file_type=filename.rsplit('.', 1)[1].lower(),
-                        metadata=json.dumps({
+                        sample_metadata=json.dumps({
                             'location': form.location.data,
                             'depth': form.depth.data,
                             'collection_date': form.collection_date.data,
@@ -791,34 +795,28 @@ def register_routes(app):
                 new_analysis.status = 'processing'
                 db.session.commit()
                 
-                # Run the pipeline (this would be done asynchronously in production)
+                # Run the pipeline (synchronous subprocess for hackathon demo)
                 input_file = os.path.join(app.config['UPLOAD_FOLDER'], sample.file_path)
-                
-                # Use mock pipeline function instead of actual pipeline
-                results = mock_run_pipeline(input_file, result_dir)
-                
-                # Save results to analysis record
-                new_analysis.results = json.dumps(results)
-                
-                # Update to processing
+                pipeline_result = run_pipeline_subprocess(input_file, result_dir, threads=2)
+
+                result_rel = os.path.relpath(result_dir, app.config['UPLOAD_FOLDER'])
+                new_analysis.result_path = result_rel
+                if pipeline_result.returncode != 0:
+                    raise RuntimeError(pipeline_result.stderr or 'Pipeline failed')
+
+                results_payload = {
+                    'result_dir': result_rel,
+                    'report_html': os.path.join(result_rel, 'results', 'report.html'),
+                    'cluster_plot': os.path.join(result_rel, 'results', 'visualizations', 'sequence_clusters.png'),
+                    'taxonomy_csv': os.path.join(result_rel, 'annotated', 'taxonomic_annotations.csv'),
+                    'abundance_csv': os.path.join(result_rel, 'abundance', 'abundance_species.csv'),
+                    'diversity_csv': os.path.join(result_rel, 'abundance', 'diversity_metrics.csv')
+                }
+
+                new_analysis.results_json = json.dumps(results_payload)
                 new_analysis.status = 'completed'
                 new_analysis.completed_at = datetime.utcnow()
                 db.session.commit()
-                
-                # QUICK DEMO OUTPUT: copy demo SVG to a per-analysis static path
-                try:
-                    static_dir = os.path.join(os.path.dirname(__file__), 'static')
-                    results_static_dir = os.path.join(static_dir, 'results')
-                    os.makedirs(results_static_dir, exist_ok=True)
-                    demo_svg = os.path.join(static_dir, 'img', 'demo', 'sample_visualization.svg')
-                    dest_svg = os.path.join(results_static_dir, f"{new_analysis.id}.svg")
-                    if os.path.exists(demo_svg):
-                        shutil.copyfile(demo_svg, dest_svg)
-                        # Save a web-accessible path in the DB (served by Flask static)
-                        new_analysis.result_path = f"static/results/{new_analysis.id}.svg"
-                        db.session.commit()
-                except Exception:
-                    pass
 
                 # Create notification
                 notification = Notification(
@@ -855,23 +853,56 @@ def register_routes(app):
             flash('You do not have access to these results', 'danger')
             return redirect(url_for('projects'))
             
-        # Load results data (this would be customized based on your actual result format)
-        results_data = {
-            'taxonomy_tree': [],
-            'abundance_charts': [],
-            'community_comparison': [],
-            'novel_clusters': []
-        }
+        results_payload = {}
+        if analysis.results_json:
+            try:
+                results_payload = json.loads(analysis.results_json)
+            except Exception:
+                results_payload = {}
         
         # Get comments for this analysis
         comments = Comment.query.filter_by(analysis_id=analysis_id).order_by(Comment.created_at).all()
         
-        return render_template('analysis_results.html', 
-                              analysis=analysis, 
-                              sample=sample, 
+        return render_template('analysis_results.html',
+                              analysis=analysis,
+                              sample=sample,
                               project=project,
-                              results_data=results_data,
+                              results_payload=results_payload,
                               comments=comments)
+
+    @app.route('/analyses/<int:analysis_id>/artifact/<artifact>')
+    @login_required
+    def analysis_artifact(analysis_id, artifact):
+        analysis = Analysis.query.get_or_404(analysis_id)
+        sample = Sample.query.get(analysis.sample_id)
+        project = Project.query.get(sample.project_id)
+
+        if project.owner_id != current_user.id and current_user not in project.collaborators:
+            flash('You do not have access to these results', 'danger')
+            return redirect(url_for('projects'))
+
+        if not analysis.results_json:
+            flash('No analysis artifacts available', 'warning')
+            return redirect(url_for('analysis_results', analysis_id=analysis_id))
+
+        try:
+            payload = json.loads(analysis.results_json)
+        except Exception:
+            payload = {}
+
+        rel_path = payload.get(artifact)
+        if not rel_path:
+            flash('Requested artifact not found', 'warning')
+            return redirect(url_for('analysis_results', analysis_id=analysis_id))
+
+        upload_root = app.config.get('UPLOAD_FOLDER')
+        abs_path = os.path.join(upload_root, rel_path)
+        if not os.path.exists(abs_path):
+            flash('Artifact file missing on disk', 'danger')
+            return redirect(url_for('analysis_results', analysis_id=analysis_id))
+
+        directory, filename = os.path.split(abs_path)
+        return send_from_directory(directory, filename, as_attachment=False)
 
     # ----- Stubs for menu actions referenced in templates (only those not already defined below) -----
 

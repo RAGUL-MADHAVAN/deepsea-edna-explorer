@@ -30,7 +30,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.classification import classify
 from src.annotation import annotate
 from src.abundance import estimate
-from src.utils import io, preprocessing, visualization
+from src.utils import io, preprocessing, visualization, mock_bio
 
 
 def setup_logging(output_dir):
@@ -101,8 +101,9 @@ def validate_inputs(args, logger):
         sys.exit(1)
     
     # Check if input is in the correct format
-    if input_path.is_file() and not any(input_path.name.endswith(ext) for ext in ['.fastq', '.fq', '.fastq.gz', '.fq.gz']):
-        logger.warning(f"Input file may not be in FASTQ format: {args.input}")
+    allowed_exts = ['.fastq', '.fq', '.fastq.gz', '.fq.gz', '.fasta', '.fa', '.fna', '.fasta.gz', '.fa.gz']
+    if input_path.is_file() and not any(input_path.name.endswith(ext) for ext in allowed_exts):
+        logger.warning(f"Input file may not be in FASTQ/FASTA format: {args.input}")
     
     return input_path, output_path
 
@@ -134,10 +135,31 @@ def run_pipeline(args, logger):
         min_length=args.min_length,
         threads=args.threads
     )
+
+    preproc_payload = io.load_results(preprocessed_data)
+    sequences = preproc_payload.get('sequences', [])
+
+    # Step 2: HMM marker detection (simulated)
+    logger.info("Step 2: HMM marker/eukaryote detection (simulated demo)")
+    hmm_results = mock_bio.simulate_hmm_marker_detection(sequences, preproc_dir)
+    logger.info(
+        "HMM demo summary: %s markers, avg_score=%s",
+        len(hmm_results.get('summary', {}).get('markers_detected', [])),
+        hmm_results.get('summary', {}).get('avg_hmm_score')
+    )
+
+    # Step 3: BLAST similarity search (simulated)
+    logger.info("Step 3: BLAST similarity search (simulated demo)")
+    blast_results = mock_bio.simulate_blast_similarity(sequences, preproc_dir)
+    logger.info(
+        "BLAST demo summary: %s sequences, unique_hits=%s",
+        blast_results.get('total_sequences'),
+        len({h.get('top_hit') for h in blast_results.get('top_hits', [])})
+    )
     
-    # Step 2: Sequence Classification
+    # Step 4: Sequence Classification / Embedding
     if 'classification' not in (args.skip_steps or []):
-        logger.info("Step 2: Deep learning sequence classification")
+        logger.info("Step 4: Deep learning sequence embedding + clustering")
         classification_results = classify.run_classification(
             input_data=preprocessed_data,
             output_dir=classified_dir,
@@ -149,9 +171,10 @@ def run_pipeline(args, logger):
         logger.info("Skipping classification step")
         classification_results = preprocessed_data  # Pass through
     
-    # Step 3: Taxonomic Annotation
+    # Step 5: Taxonomic Annotation
     if 'annotation' not in (args.skip_steps or []):
-        logger.info("Step 3: Taxonomic annotation")
+        logger.info("Step 5: Taxonomic annotation (hybrid + simulated BLAST/HMM)"
+                    "")
         annotation_results = annotate.run_annotation(
             input_data=classification_results,
             output_dir=annotated_dir,
@@ -163,9 +186,9 @@ def run_pipeline(args, logger):
         logger.info("Skipping annotation step")
         annotation_results = classification_results  # Pass through
     
-    # Step 4: Abundance Estimation
+    # Step 6: Abundance Estimation
     if 'abundance' not in (args.skip_steps or []):
-        logger.info("Step 4: Abundance estimation and biodiversity assessment")
+        logger.info("Step 6: Abundance estimation and biodiversity assessment")
         abundance_results = estimate.run_abundance_estimation(
             input_data=annotation_results,
             output_dir=abundance_dir,
@@ -176,7 +199,7 @@ def run_pipeline(args, logger):
         abundance_results = annotation_results  # Pass through
     
     # Generate final reports and visualizations
-    logger.info("Generating final reports and visualizations")
+    logger.info("Step 7: Generating final reports and visualizations")
     visualization.generate_reports(
         classification_results=classification_results if 'classification' not in (args.skip_steps or []) else None,
         annotation_results=annotation_results if 'annotation' not in (args.skip_steps or []) else None,

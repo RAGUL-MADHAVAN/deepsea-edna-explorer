@@ -30,7 +30,7 @@ logger = logging.getLogger('DeepSeaEDNA.web')
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'deep-sea-edna-explorer-secret-key'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'deep-sea-edna-explorer-demo-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///deepsea_edna.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')

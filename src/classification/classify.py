@@ -22,7 +22,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from pathlib import Path
-from sklearn.cluster import DBSCAN, HDBSCAN
+from sklearn.cluster import DBSCAN
 from sklearn.manifold import TSNE
 from umap import UMAP
 import hdbscan
@@ -124,7 +124,7 @@ class DeepCluster:
         self.embedder.to(self.device)
         
         # Initialize clustering algorithm
-        self.clusterer = HDBSCAN(min_cluster_size=5, min_samples=2, cluster_selection_epsilon=0.5)
+        self.clusterer = hdbscan.HDBSCAN(min_cluster_size=5, min_samples=2, cluster_selection_epsilon=0.5)
         
         # Initialize dimensionality reduction for visualization
         self.umap = UMAP(n_components=2, metric='cosine')
