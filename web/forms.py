@@ -44,6 +44,16 @@ class SampleUploadForm(FlaskForm):
         ],
         validators=[Optional()],
     )
+    
+    data_type = SelectField(
+        'Sequencing Data Type',
+        choices=[
+            ('amplicon', 'Amplicon (16S/18S/COI)'),
+            ('shotgun', 'Shotgun Metagenomic'),
+        ],
+        default='amplicon',
+        validators=[Optional()],
+    )
 
     # Files
     file = FileField('Sequence File')

@@ -1,15 +1,15 @@
 # DeepSeaEDNA: AI-Driven Pipeline for Deep-Sea Environmental DNA Analysis
 ## Overview
 
-DeepSeaEDNA is an advanced bioinformatics pipeline designed specifically for analyzing environmental DNA (eDNA) from deep-sea ecosystems. Unlike traditional approaches that rely heavily on reference databases, this AI-driven solution uses deep learning and unsupervised learning techniques to identify eukaryotic taxa and assess biodiversity directly from raw eDNA reads.
+DeepSeaEDNA is a discovery & analysis tool designed specifically for analyzing environmental DNA (eDNA) from deep-sea ecosystems. This system uses fixed DNA embeddings and unsupervised clustering to discover biodiversity patterns without any supervised or unsupervised model training.
 
 ### Key Features
 - **Database-Independent Analysis**: Minimizes reliance on incomplete reference databases for deep-sea organisms
-- **Deep Learning Classification**: Uses neural networks to identify patterns in sequence data without prior knowledge
-- **Taxonomic Annotation**: Assigns taxonomic classifications to sequences using both reference-based and reference-free approaches
+- **Fixed Embedding Classification**: Uses deterministic projections to identify patterns in sequence data
+- **Taxonomic Annotation**: Assigns taxonomic classifications using reference-matching and novelty discovery
 - **Abundance Estimation**: Provides quantitative measures of species abundance in samples
-- **Optimized Computational Workflow**: Reduces processing time compared to traditional methods
 - **Novel Taxa Discovery**: Enables identification of previously unknown deep-sea organisms
+- **Unsupervised Clustering**: Groups sequences based on inherent similarity using HDBSCAN
 
 ## Background
 
@@ -22,7 +22,6 @@ However, traditional bioinformatic pipelines for eDNA analysis rely heavily on r
 ### Prerequisites
 
 - Python 3.8+
-- CUDA-compatible GPU (recommended for deep learning components)
 - 16GB+ RAM
 
 ### Setup
@@ -78,7 +77,7 @@ The pipeline consists of several modules that can be run independently:
 The pipeline generates several outputs:
 
 - Classified sequence clusters
-- Taxonomic assignments with confidence scores
+- Taxonomic assignments (Reference-matched or Potential Novel)
 - Abundance estimates for identified taxa
 - Biodiversity metrics and visualizations
 

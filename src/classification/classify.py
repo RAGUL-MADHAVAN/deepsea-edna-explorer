@@ -19,12 +19,11 @@ import logging
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 from pathlib import Path
 from sklearn.cluster import DBSCAN, HDBSCAN
-from sklearn.manifold import TSNE
-from umap import UMAP
+from sklearn.decomposition import PCA
+# from umap import UMAP
 import hdbscan
 
 # Local imports
@@ -36,7 +35,7 @@ logger = logging.getLogger('DeepSeaEDNA.classification')
 
 
 class SequenceEmbedder(nn.Module):
-    """Neural network for generating sequence embeddings."""
+    """Neural network for generating sequence embeddings using fixed random projections."""
     
     def __init__(self, input_dim=5, hidden_dims=[128, 256, 512], embedding_dim=128):
         """Initialize the sequence embedder.
@@ -62,6 +61,10 @@ class SequenceEmbedder(nn.Module):
         self.encoder = nn.Sequential(*layers)
         self.global_pool = nn.AdaptiveAvgPool1d(1)
         self.fc = nn.Linear(prev_dim, embedding_dim)
+        
+        # Ensure weights are fixed and not updated
+        for param in self.parameters():
+            param.requires_grad = False
         
     def forward(self, x):
         """Forward pass through the network.
@@ -107,7 +110,7 @@ class SequenceDataset(Dataset):
 
 
 class DeepCluster:
-    """Deep clustering model for sequence classification."""
+    """Deep clustering model for sequence classification using fixed embeddings."""
     
     def __init__(self, embedding_dim=128, use_gpu=False):
         """Initialize the deep clustering model.
@@ -119,67 +122,22 @@ class DeepCluster:
         self.embedding_dim = embedding_dim
         self.device = torch.device('cuda' if use_gpu and torch.cuda.is_available() else 'cpu')
         
-        # Initialize embedder
+        # Set fixed seed for deterministic random projections
+        torch.manual_seed(42)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(42)
+        
+        # Initialize embedder with fixed random weights
         self.embedder = SequenceEmbedder(embedding_dim=embedding_dim)
         self.embedder.to(self.device)
+        self.embedder.eval()  # Set to evaluation mode
         
         # Initialize clustering algorithm
         self.clusterer = HDBSCAN(min_cluster_size=5, min_samples=2, cluster_selection_epsilon=0.5)
         
         # Initialize dimensionality reduction for visualization
-        self.umap = UMAP(n_components=2, metric='cosine')
+        self.pca = PCA(n_components=2, random_state=42)
         
-    def train_embedder(self, dataloader, epochs=10, lr=0.001):
-        """Train the sequence embedder using contrastive learning.
-        
-        Args:
-            dataloader: DataLoader containing sequences
-            epochs: Number of training epochs
-            lr: Learning rate
-        """
-        logger.info(f"Training sequence embedder on {self.device}")
-        
-        # Define loss function and optimizer
-        criterion = nn.TripletMarginLoss(margin=1.0)
-        optimizer = optim.Adam(self.embedder.parameters(), lr=lr)
-        
-        self.embedder.train()
-        for epoch in range(epochs):
-            total_loss = 0
-            for batch in dataloader:
-                # Generate triplets (anchor, positive, negative)
-                # In a real implementation, this would be based on sequence similarity
-                # For now, we'll use a simplified approach
-                anchors = batch.to(self.device)
-                batch_size = anchors.size(0)
-                
-                # Forward pass
-                embeddings = self.embedder(anchors)
-                
-                # Create triplets
-                # This is a simplified implementation - in practice, you'd use more
-                # sophisticated triplet mining strategies
-                anchor_idx = torch.arange(batch_size)
-                positive_idx = (anchor_idx + 1) % batch_size
-                negative_idx = (anchor_idx + batch_size // 2) % batch_size
-                
-                anchor_emb = embeddings[anchor_idx]
-                positive_emb = embeddings[positive_idx]
-                negative_emb = embeddings[negative_idx]
-                
-                # Compute loss
-                loss = criterion(anchor_emb, positive_emb, negative_emb)
-                
-                # Backward pass and optimize
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                
-                total_loss += loss.item()
-            
-            avg_loss = total_loss / len(dataloader)
-            logger.info(f"Epoch {epoch+1}/{epochs}, Loss: {avg_loss:.4f}")
-    
     def generate_embeddings(self, dataloader):
         """Generate embeddings for sequences.
         
@@ -189,7 +147,7 @@ class DeepCluster:
         Returns:
             Numpy array of embeddings
         """
-        logger.info("Generating sequence embeddings")
+        logger.info("Generating sequence embeddings using fixed random projections")
         
         self.embedder.eval()
         embeddings = []
@@ -233,7 +191,7 @@ class DeepCluster:
         logger.info("Generating embedding visualization")
         
         # Reduce dimensionality for visualization
-        reduced_embeddings = self.umap.fit_transform(embeddings)
+        reduced_embeddings = self.pca.fit_transform(embeddings)
         
         # Save visualization data
         visualization_data = {
@@ -290,11 +248,11 @@ def run_classification(input_data, output_dir, reference_db=None, use_gpu=False,
         num_workers=threads if threads < 4 else 4
     )
     
-    # Initialize and train deep clustering model
+    # Initialize deep clustering model (no training)
     model = DeepCluster(use_gpu=use_gpu)
-    model.train_embedder(dataloader, epochs=5)  # Reduced epochs for demonstration
+    # model.train_embedder(dataloader, epochs=5)  # Removed training logic
     
-    # Generate embeddings
+    # Generate embeddings using fixed projections
     embeddings = model.generate_embeddings(dataloader)
     
     # Cluster sequences

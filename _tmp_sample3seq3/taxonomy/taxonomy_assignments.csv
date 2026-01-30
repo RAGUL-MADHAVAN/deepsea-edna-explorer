@@ -1,0 +1,4 @@
+query_id,scientific_name,taxonomic_rank,hit_def,e_value,identity_percent
+ASV_1;size=1,Unclassified,unknown,Remote BLAST failed or unavailable,,0.0
+ASV_2;size=1,Unclassified,unknown,Remote BLAST failed or unavailable,,0.0
+ASV_3;size=1,Unclassified,unknown,Remote BLAST failed or unavailable,,0.0

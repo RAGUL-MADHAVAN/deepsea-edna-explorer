@@ -78,32 +78,8 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label for="collection_date" class="form-label">Collection Date</label>
-                        {{ form.collection_date(class="form-control", type="date") }}
-                        {% if form.collection_date.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.collection_date.errors %}
-                            <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="location" class="form-label">Collection Location</label>
-                        {{ form.location(class="form-control", placeholder="e.g., Mariana Trench, North Atlantic, etc.") }}
-                        {% if form.location.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.location.errors %}
-                            <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-3">
                         <label for="depth" class="form-label">Collection Depth (m)</label>
-                        {{ form.depth(class="form-control", placeholder="e.g., 1500") }}
+                        {{ form.depth(class="form-control ocean-input", placeholder="e.g., 1500") }}
                         {% if form.depth.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.depth.errors %}
@@ -115,7 +91,7 @@
                     
                     <div class="mb-3">
                         <label for="sample_type" class="form-label">Sample Type*</label>
-                        {{ form.sample_type(class="form-select") }}
+                        {{ form.sample_type(class="form-select ocean-input") }}
                         {% if form.sample_type.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.sample_type.errors %}
@@ -126,11 +102,24 @@
                     </div>
                     
                     <div class="mb-3">
+                        <label for="data_type" class="form-label">Sequencing Data Type*</label>
+                        {{ form.data_type(class="form-select ocean-input") }}
+                        <div class="form-text">Select "Amplicon" for 16S/18S/COI marker genes or "Shotgun Metagenomic" for whole genome sequencing.</div>
+                        {% if form.data_type.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.data_type.errors %}
+                            <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
                         <label for="file" class="form-label">Sequence File*</label>
                         <div class="input-group">
-                            {{ form.file(class="form-control", accept=".fasta,.fastq,.fa,.fq") }}
+                            {{ form.file(class="form-control ocean-input", accept=".fasta,.fastq,.fa,.fq,.csv,.xlsx,.xls") }}
                         </div>
-                        <div class="form-text">Accepted formats: FASTA (.fasta, .fa) or FASTQ (.fastq, .fq)</div>
+                        <div class="form-text">Accepted formats: FASTA/FASTQ, CSV, Excel.</div>
                         {% if form.file.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.file.errors %}
@@ -143,7 +132,7 @@
                     <div class="mb-3">
                         <label for="metadata_file" class="form-label">Metadata File (Optional)</label>
                         <div class="input-group">
-                            {{ form.metadata_file(class="form-control", accept=".txt,.csv,.tsv") }}
+                            {{ form.metadata_file(class="form-control ocean-input", accept=".txt,.csv,.tsv") }}
                         </div>
                         <div class="form-text">Accepted formats: TXT, CSV, TSV</div>
                         {% if form.metadata_file.errors %}
@@ -167,7 +156,7 @@
                     <div id="analysisOptions" class="mb-3 ps-4 border-start" style="display: none;">
                         <div class="mb-3">
                             <label for="analysis_type" class="form-label">Analysis Type</label>
-                            {{ form.analysis_type(class="form-select") }}
+                            {{ form.analysis_type(class="form-select ocean-input") }}
                             {% if form.analysis_type.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in form.analysis_type.errors %}
@@ -201,7 +190,7 @@
                         
                         <div class="mb-3">
                             <label for="classification_model" class="form-label">Classification Model</label>
-                            {{ form.classification_model(class="form-select") }}
+                            {{ form.classification_model(class="form-select ocean-input") }}
                             {% if form.classification_model.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in form.classification_model.errors %}

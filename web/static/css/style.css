@@ -1,22 +1,65 @@
 /* DeepSea eDNA Explorer - Main Stylesheet */
 
 :root {
-    --primary-color: #0077be;
-    --primary-light: #00a8e8;
-    --primary-dark: #005c91;
-    --secondary-color: #00cccc;
+    /* Brand */
+    --primary-color: #0a4d68;
+    --primary-light: #0ea5e9;
+    --primary-dark: #053b50;
+    --secondary-color: #088395;
     --accent-color: #ff7f50;
-    --light-bg: #f0f8ff;
-    --dark-bg: #003366;
-    --text-color: #333333;
+
+    /* Surface + text */
+    --page-bg: #eef7fb;
+    --surface: #ffffff;
+    --surface-2: #f8fbfd;
+    --text-color: #0f172a;
+    --muted-text: #64748b;
+    --border-color: #e2e8f0;
     --light-text: #ffffff;
-    --border-color: #e0f0ff;
+
+    /* Radii + shadows */
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 6px 18px rgba(2, 8, 23, 0.08);
+    --shadow-md: 0 14px 34px rgba(2, 8, 23, 0.12);
 }
 
 body {
     font-family: 'Roboto', sans-serif;
     color: var(--text-color);
-    background-color: var(--light-bg);
+    background: radial-gradient(1200px 600px at 20% 0%, #dff1f7 0%, transparent 60%),
+                radial-gradient(900px 500px at 80% 10%, #e6f7ff 0%, transparent 55%),
+                var(--page-bg);
+}
+
+/* Make headings crisp */
+h1, h2, h3, h4, h5 {
+    letter-spacing: -0.02em;
+}
+
+.text-muted {
+    color: var(--muted-text) !important;
+}
+
+/* Page header helper */
+.page-header {
+    background: linear-gradient(135deg, rgba(10, 77, 104, 0.10), rgba(14, 165, 233, 0.08));
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: var(--radius);
+    padding: 18px 18px;
+    box-shadow: var(--shadow-sm);
+}
+
+.page-header .breadcrumb {
+    margin-bottom: 0.25rem;
+}
+
+/* Ocean divider (subtle, professional) */
+.ocean-divider {
+    height: 2px;
+    background: linear-gradient(to right, rgba(10,77,104,0.0), rgba(10,77,104,0.35), rgba(14,165,233,0.35), rgba(10,77,104,0.0));
+    border-radius: 999px;
+    margin: 1.25rem 0;
 }
 
 /* Ocean Wave Animation */
@@ -318,33 +361,34 @@ body {
 
 /* Card Styles */
 .card {
-    border-radius: 10px;
+    border-radius: var(--radius);
     overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-sm);
     transition: all 0.3s ease;
-    border: none;
+    border: 1px solid rgba(226, 232, 240, 0.9);
     margin-bottom: 20px;
+    background: var(--surface);
 }
 
 .card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
 }
 
 .card-header {
     font-weight: 600;
     border-bottom: none;
+    background: linear-gradient(135deg, rgba(10, 77, 104, 0.06), rgba(14, 165, 233, 0.06));
 }
 
 /* Button Styles */
 .btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0b6b8d 100%);
+    border: none;
 }
 
 .btn-primary:hover {
-    background-color: var(--primary-dark);
-    border-color: var(--primary-dark);
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
 }
 
 .btn-outline-primary {
@@ -358,16 +402,141 @@ body {
 }
 
 /* Form Styles */
+.form-label {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.form-text {
+    color: var(--muted-text);
+}
+
+.form-control,
+.form-select {
+    border-radius: 12px;
+    border-color: var(--border-color);
+    background-color: var(--surface);
+}
+
 .form-control:focus {
     border-color: var(--primary-light);
     box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.15);
 }
+
+/* Tables (clean + professional) */
+.table {
+    color: var(--text-color);
+}
+
+.table thead th {
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #334155;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(14, 165, 233, 0.06);
+}
+
+/* Badges (consistent) */
+.badge-scientific {
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 0.45em 0.7em;
+    border-radius: 999px;
+}
+
+.badge-known {
+    background-color: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.badge-novel {
+    background-color: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fdba74;
+}
+
+.badge-high-novelty {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.badge-unknown {
+    background-color: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+
+/* Result status pill (UI helper) */
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-2);
+    color: #334155;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.status-pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+}
+
+.status-pill.success { border-color: #86efac; background: #ecfdf5; color: #065f46; }
+.status-pill.success .dot { background: #22c55e; }
+.status-pill.warn { border-color: #fdba74; background: #fff7ed; color: #9a3412; }
+.status-pill.warn .dot { background: #f97316; }
+.status-pill.danger { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+.status-pill.danger .dot { background: #ef4444; }
 
 /* Footer Styles */
 footer {
     background-color: var(--dark-bg);
     color: var(--light-text);
     padding: 30px 0;
+}
+
+/* Scientific Badges */
+/* (moved + modernized above) */
+
+/* Scientific Table */
+.table-scientific {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.table-scientific th {
+    background-color: #f8fafc;
+    color: #4a5568;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.table-scientific td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.875rem;
+}
+
+.table-scientific tr:last-child td {
+    border-bottom: none;
 }
 
 /* Responsive Styles */

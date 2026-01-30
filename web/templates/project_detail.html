@@ -298,7 +298,7 @@
                                                 {{ sample.name }}
                                             </a>
                                         </td>
-                                        <td>{{ sample.collection_date.strftime('%Y-%m-%d') if sample.collection_date else 'N/A' }}</td>
+                                        <td>{{ sample.collection_date if sample.collection_date else 'N/A' }}</td>
                                         <td>{{ sample.depth if sample.depth else 'N/A' }}</td>
                                         <td>{{ sample.get_file_size_display() }}</td>
                                         <td>{{ sample.analyses|length }}</td>

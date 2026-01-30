@@ -38,7 +38,7 @@ class User(UserMixin, db.Model):
     # Relationships
     projects = db.relationship('Project', backref='owner', lazy=True)
     notifications = db.relationship('Notification', backref='user', lazy=True)
-    badges = db.relationship('UserBadge', backref='user', lazy=True)
+    # badges relationship removed
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -76,10 +76,7 @@ class User(UserMixin, db.Model):
         return items[:limit]
 
     def get_badges_count(self):
-        try:
-            return len(self.badges)
-        except Exception:
-            return 0
+        return 0
 
 # Project model
 class Project(db.Model):
@@ -223,6 +220,17 @@ class Analysis(db.Model):
     analysis_type = db.Column(db.String(50), nullable=False)  # Standard, Novel Discovery, Fast Mode
     status = db.Column(db.String(20), default='pending')  # pending, processing, completed, failed
     result_path = db.Column(db.String(500))  # Path to results directory
+
+    # Explicit pointers to pipeline outputs (stored as web-accessible paths when available)
+    classification_path = db.Column(db.String(500))
+    annotation_path = db.Column(db.String(500))
+    abundance_path = db.Column(db.String(500))
+    visualization_path = db.Column(db.String(500))
+    report_path = db.Column(db.String(500))
+
+    # Text field to store pipeline logs (plain text)
+    pipeline_log = db.Column(db.Text)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     error_message = db.Column(db.Text)
@@ -261,28 +269,7 @@ class Notification(db.Model):
     def __repr__(self):
         return f'<Notification {self.id}>'
 
-# Badge model for gamification
-class Badge(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)
-    description = db.Column(db.Text, nullable=False)
-    icon = db.Column(db.String(200))  # Path to badge icon
-    
-    # Relationships
-    users = db.relationship('UserBadge', backref='badge', lazy=True)
-    
-    def __repr__(self):
-        return f'<Badge {self.name}>'
-
-# UserBadge association model
-class UserBadge(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    badge_id = db.Column(db.Integer, db.ForeignKey('badge.id'), nullable=False)
-    awarded_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def __repr__(self):
-        return f'<UserBadge {self.user_id} - {self.badge_id}>'
+# Gamification models removed
 
 # Comment model for collaboration
 class Comment(db.Model):

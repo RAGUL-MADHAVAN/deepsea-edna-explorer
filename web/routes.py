@@ -8,41 +8,198 @@ Routes for DeepSea eDNA Explorer web application
 import os
 import shutil
 import json
+import pandas as pd
 import uuid
+import subprocess
+import sys
+import threading
 from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, send_file, send_from_directory
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from Bio import SeqIO
 
 # Mongo client
 from app import mongo
 
 # Import models
-from models import db, User, Project, Sample, Analysis, Notification, Badge, UserBadge, Comment
+from models import db, User, Project, Sample, Analysis, Notification, Comment
 
-# Import pipeline components - commented out for simplified demo
+# Import pipeline components
 # from src.pipeline import run_pipeline
-
-# Mock pipeline function for demo
-def mock_run_pipeline(input_file, output_dir, params=None):
-    """Mock function to simulate pipeline execution for demo purposes"""
-    return {
-        "status": "success",
-        "results": {
-            "taxonomic_classification": {"species": ["Demo Species 1", "Demo Species 2"]},
-            "abundance_estimation": {"Demo Species 1": 0.65, "Demo Species 2": 0.35},
-            "visualization_path": "static/img/demo/sample_visualization.png"
-        }
-    }
 
 def register_routes(app):
     # Helper functions
-    def allowed_file(filename):
-        ALLOWED_EXTENSIONS = {'fastq', 'fq', 'fasta', 'fa', 'fna', 'fastq.gz', 'fq.gz', 'fasta.gz', 'fa.gz'}
-        return '.' in filename and \
-               filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-    
+    def allowed_file(filename, allowed=None):
+        default_allowed = {'fastq', 'fq', 'fasta', 'fa', 'csv', 'xlsx', 'xls'}
+        exts = allowed if allowed is not None else default_allowed
+        return '.' in filename and filename.rsplit('.', 1)[1].lower() in exts
+
+    def run_pipeline_async(app_instance, analysis_id, project_id, user_id, sample_id, input_file_path, output_dir_path):
+        """
+        Background worker to run the pipeline asynchronously.
+        """
+        with app_instance.app_context():
+            print(f"Starting async pipeline for analysis {analysis_id}", flush=True)
+            try:
+                # Re-fetch objects to ensure they are attached to this session
+                analysis = Analysis.query.get(analysis_id)
+                project = Project.query.get(project_id)
+                sample = Sample.query.get(sample_id)
+                # user = User.query.get(user_id) # Not strictly needed if we just use user_id for Notification
+
+                if not analysis:
+                    print(f"Analysis {analysis_id} not found in worker", flush=True)
+                    return
+
+                # Convert CSV/Excel or FASTQ to FASTA for downstream processing
+                final_input_file = input_file_path
+                
+                try:
+                    ext = os.path.splitext(input_file_path)[1].lower().lstrip('.')
+                    converted_dir = os.path.join(output_dir_path, 'converted')
+                    os.makedirs(converted_dir, exist_ok=True)
+                    
+                    if ext in ['csv', 'xlsx', 'xls']:
+                        # Read sequences from CSV/Excel
+                        if ext == 'csv':
+                            df = pd.read_csv(input_file_path)
+                        else:
+                            df = pd.read_excel(input_file_path)
+                        col = None
+                        for candidate in ['sequence', 'seq', 'dna', 'Sequence', 'Seq']:
+                            if candidate in df.columns:
+                                col = candidate
+                                break
+                        if col is None:
+                            col = df.columns[0]
+                        sequences = df[col].astype(str).tolist()
+                        out_fasta = os.path.join(converted_dir, 'input_converted.fasta')
+                        with open(out_fasta, 'w') as f:
+                            for i, s in enumerate(sequences):
+                                s_clean = ''.join(ch for ch in s.upper() if ch in 'ACGTN')
+                                if not s_clean:
+                                    continue
+                                f.write(f'>seq_{i}\n{s_clean}\n')
+                        final_input_file = out_fasta
+                    elif ext in ['fastq', 'fq']:
+                        # Simple fastq -> fasta conversion
+                        out_fasta = os.path.join(converted_dir, 'input_converted.fasta')
+                        count = 0
+                        with open(out_fasta, 'w') as out_handle:
+                            for record in SeqIO.parse(input_file_path, 'fastq'):
+                                seq_str = str(record.seq).upper()
+                                if len(seq_str) >= 50:
+                                    rid = record.id or f'read_{count}'
+                                    out_handle.write(f'>{rid}\n{seq_str}\n')
+                                    count += 1
+                        if count > 0:
+                            final_input_file = out_fasta
+                except Exception as e:
+                    print(f"Conversion warning: {e}", flush=True)
+
+                # Build pipeline command
+                project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+                pipeline_script = os.path.join(project_root, 'src', 'pipeline.py')
+                
+                # Extract data type from sample metadata
+                sample_meta = json.loads(sample.sample_metadata or '{}')
+                data_type = sample_meta.get('data_type', 'amplicon')
+                
+                cmd = [sys.executable or 'python', pipeline_script, '--input', final_input_file, '--output', output_dir_path, '--data-type', data_type]
+
+                print(f"Executing pipeline command: {cmd}", flush=True)
+                
+                # Execute pipeline via subprocess
+                try:
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+                    print(f"Pipeline finished with return code: {result.returncode}", flush=True)
+                except subprocess.TimeoutExpired:
+                    print("Pipeline timed out!", flush=True)
+                    analysis.status = 'failed'
+                    analysis.error_message = 'Pipeline timed out (limit: 1h)'
+                    db.session.commit()
+                    return
+                except Exception as e:
+                    print(f"Pipeline execution error: {e}", flush=True)
+                    raise e
+
+                # Capture logs
+                stage_header = (
+                    'Pipeline stages (Real-Time):\n'
+                    f'- Data Type: {data_type.title()}\n'
+                    '- QC / Preprocessing – fastp (Real)\n'
+                    '- DNA Embedding – DNABERT-2 (Real)\n'
+                    '- Clustering – Unsupervised HDBSCAN (Real)\n'
+                    '- Taxonomy – BLAST (Local/Remote) (Real)\n'
+                    '- Phylogeny & Assembly – Real Modules\n'
+                    '- Abundance & Diversity – Real Calculation\n'
+                    '- Report Generation – Dynamic\n\n'
+                )
+                pipeline_log = stage_header + '=== STDOUT ===\n' + (result.stdout or '') + '\n=== STDERR ===\n' + (result.stderr or '')
+                analysis.pipeline_log = pipeline_log
+
+                if result.returncode != 0:
+                    analysis.status = 'failed'
+                    analysis.error_message = f'Pipeline exited with code {result.returncode}'
+                    analysis.completed_at = datetime.utcnow()
+                    db.session.commit()
+                    return
+
+                # Expected output paths (New Pipeline)
+                rel_base = os.path.join(str(user_id), str(project_id), 'analysis', str(analysis_id))
+                final_csv_rel = os.path.join(rel_base, 'results', 'final_results.csv')
+                
+                # Check for final results
+                abs_final_csv = os.path.join(app_instance.config['UPLOAD_FOLDER'], final_csv_rel)
+                
+                if os.path.exists(abs_final_csv):
+                    analysis.status = 'completed'
+                    analysis.completed_at = datetime.utcnow()
+                    analysis.result_path = rel_base
+                    # Store main result file in a suitable field (reusing abundance_path or similar if needed, 
+                    # but result_path pointing to dir is enough for now)
+                else:
+                    analysis.status = 'failed'
+                    analysis.error_message = f'Missing final output: {final_csv_rel}'
+
+                db.session.commit()
+
+                # Store output paths in MongoDB
+                try:
+                    mongo.db.projects.update_one(
+                        {'project_id': project.id},
+                        {'$set': {
+                            'project_title': project.title,
+                            f'analyses.{analysis.id}': {
+                                'result_path': rel_base,
+                                'status': analysis.status,
+                                'completed_at': (analysis.completed_at.isoformat() if analysis.completed_at else None),
+                            }
+                        }},
+                        upsert=True
+                    )
+                except Exception as e:
+                    print(f"MongoDB update failed: {e}", flush=True)
+
+                # Create notification
+                # notification = Notification(
+                #     user_id=user_id,
+                #     message=f'Analysis of {sample.name} {"completed" if analysis.status=="completed" else "finished with issues"}',
+                #     link=f"/analyses/{analysis.id}/results"
+                # )
+                # db.session.add(notification)
+                # db.session.commit()
+
+            except Exception as e:
+                print(f"Async pipeline unhandled error: {e}", flush=True)
+                if analysis:
+                    analysis.status = 'failed'
+                    analysis.error_message = str(e)
+                    analysis.completed_at = datetime.utcnow()
+                    db.session.commit()
+
     # Example file download endpoint for templates (e.g., upload_sample.html)
     @app.route('/download-example/<path:filename>')
     @login_required
@@ -55,6 +212,11 @@ def register_routes(app):
         except Exception:
             flash('Example file not found', 'danger')
             return redirect(url_for('projects'))
+
+    @app.route('/files/<path:filename>')
+    @login_required
+    def uploaded_file(filename):
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
     # 1. Entry Point (login/signup)
     @app.route('/')
@@ -217,12 +379,6 @@ def register_routes(app):
             'timestamp': datetime.utcnow().isoformat()
         })
     
-    # Gamification Feature
-    @app.route('/gamification')
-    @login_required
-    def gamification():
-        flash('Gamification features have been removed to maintain a strictly scientific interface.', 'info')
-        return redirect(url_for('dashboard'))
     
     # 2. Researcher Profile Section
     @app.route('/profile')
@@ -641,46 +797,68 @@ def register_routes(app):
                     flash('No selected file', 'danger')
                     return redirect(request.url)
 
-                if file and allowed_file(file.filename):
-                    # Save sequence file
-                    filename = secure_filename(file.filename)
-                    sample_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'samples', str(project_id))
-                    os.makedirs(sample_dir, exist_ok=True)
-                    file_path = os.path.join(sample_dir, filename)
-                    file.save(file_path)
+                # Validate extension (FASTA/FASTQ only)
+                if not allowed_file(file.filename):
+                    flash('File type not allowed. Please upload FASTA (.fasta, .fa), FASTQ (.fastq, .fq), CSV (.csv), or Excel (.xlsx, .xls) files.', 'danger')
+                    return redirect(request.url)
 
-                    # Optionally save metadata file
-                    if form.metadata_file.data and getattr(form.metadata_file.data, 'filename', ''):
-                        md_file = form.metadata_file.data
-                        md_filename = secure_filename(md_file.filename)
-                        md_path = os.path.join(sample_dir, md_filename)
-                        try:
-                            md_file.save(md_path)
-                        except Exception:
-                            pass
+                # Validate file size against MAX_CONTENT_LENGTH
+                try:
+                    file.stream.seek(0, os.SEEK_END)
+                    file_size = file.stream.tell()
+                    file.stream.seek(0)
+                except Exception:
+                    file_size = None
+                max_size = app.config.get('MAX_CONTENT_LENGTH')
+                if max_size and file_size and file_size > max_size:
+                    flash(f'File is too large. Maximum allowed size is {int(max_size/1024/1024)} MB.', 'danger')
+                    return redirect(request.url)
 
-                    # Create sample record
-                    new_sample = Sample(
-                        name=form.name.data,
-                        description=form.description.data,
-                        project_id=project_id,
-                        file_path=os.path.join('samples', str(project_id), filename),
-                        file_type=filename.rsplit('.', 1)[1].lower(),
-                        metadata=json.dumps({
-                            'location': form.location.data,
-                            'depth': form.depth.data,
-                            'collection_date': form.collection_date.data,
-                            'sample_type': form.sample_type.data,
-                        })
-                    )
+                # Save sequence file to structured directory: uploads/<user_id>/<project_id>/raw/
+                filename = secure_filename(file.filename)
+                sample_dir = os.path.join(app.config['UPLOAD_FOLDER'], str(current_user.id), str(project_id), 'raw')
+                os.makedirs(sample_dir, exist_ok=True)
+                file_path = os.path.join(sample_dir, filename)
+                file.save(file_path)
 
-                    db.session.add(new_sample)
-                    db.session.commit()
+                # Optionally save metadata file
+                if form.metadata_file.data and getattr(form.metadata_file.data, 'filename', ''):
+                    md_file = form.metadata_file.data
+                    md_filename = secure_filename(md_file.filename)
+                    md_path = os.path.join(sample_dir, md_filename)
+                    try:
+                        md_file.save(md_path)
+                    except Exception:
+                        pass
 
-                    flash('Sample uploaded successfully', 'success')
-                    return redirect(url_for('project_detail', project_id=project_id))
-                else:
-                    flash('File type not allowed', 'danger')
+                # Determine normalized file type
+                ext = filename.rsplit('.', 1)[1].lower()
+                file_type = 'fasta' if ext in ['fa', 'fasta'] else ('fastq' if ext in ['fq', 'fastq'] else ext)
+
+                # Create sample record
+                new_sample = Sample(
+                    name=form.name.data,
+                    description=form.description.data,
+                    project_id=project_id,
+                    file_path=os.path.join(str(current_user.id), str(project_id), 'raw', filename),
+                    file_type=file_type,
+                    sample_metadata=json.dumps({
+                        'location': form.location.data,
+                        'depth': form.depth.data,
+                        'collection_date': form.collection_date.data,
+                        'sample_type': form.sample_type.data,
+                        'data_type': form.data_type.data
+                    })
+                )
+
+                db.session.add(new_sample)
+                db.session.commit()
+
+                flash('Sample uploaded successfully', 'success')
+                # Optionally auto-run analysis if requested
+                if form.run_analysis.data:
+                    return redirect(url_for('analyze_sample', sample_id=new_sample.id))
+                return redirect(url_for('project_detail', project_id=project_id))
 
         return render_template('upload_sample.html', project=project, form=form)
     
@@ -793,68 +971,86 @@ def register_routes(app):
             db.session.add(new_analysis)
             db.session.commit()
             
-            # Start analysis process (this would typically be done asynchronously)
             try:
-                # Create result directory
-                result_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'results', str(new_analysis.id))
-                os.makedirs(result_dir, exist_ok=True)
-                
-                # Set the result path
-                new_analysis.result_path = os.path.join('results', str(new_analysis.id))
+                # Create output directory within structured uploads
+                output_dir = os.path.join(app.config['UPLOAD_FOLDER'], str(current_user.id), str(project.id), 'analysis', str(new_analysis.id))
+                os.makedirs(output_dir, exist_ok=True)
+
+                # Update analysis status
                 new_analysis.status = 'processing'
                 db.session.commit()
                 
-                # Run the pipeline (this would be done asynchronously in production)
+                # Build absolute input file path
                 input_file = os.path.join(app.config['UPLOAD_FOLDER'], sample.file_path)
-                
-                # Use mock pipeline function instead of actual pipeline
-                results = mock_run_pipeline(input_file, result_dir)
-                
-                # Save results to analysis record
-                new_analysis.results = json.dumps(results)
-                
-                # Update to processing
-                new_analysis.status = 'completed'
-                new_analysis.completed_at = datetime.utcnow()
-                db.session.commit()
-                
-                # QUICK DEMO OUTPUT: copy demo SVG to a per-analysis static path
+                # Convert CSV/Excel or FASTQ to FASTA for downstream processing
                 try:
-                    static_dir = os.path.join(os.path.dirname(__file__), 'static')
-                    results_static_dir = os.path.join(static_dir, 'results')
-                    os.makedirs(results_static_dir, exist_ok=True)
-                    demo_svg = os.path.join(static_dir, 'img', 'demo', 'sample_visualization.svg')
-                    dest_svg = os.path.join(results_static_dir, f"{new_analysis.id}.svg")
-                    if os.path.exists(demo_svg):
-                        shutil.copyfile(demo_svg, dest_svg)
-                        # Save a web-accessible path in the DB (served by Flask static)
-                        new_analysis.result_path = f"static/results/{new_analysis.id}.svg"
-                        db.session.commit()
+                    ext = os.path.splitext(input_file)[1].lower().lstrip('.')
+                    converted_dir = os.path.join(output_dir, 'converted')
+                    os.makedirs(converted_dir, exist_ok=True)
+                    if ext in ['csv', 'xlsx', 'xls']:
+                        # Read sequences from CSV/Excel; prefer 'sequence' column, fallback to first column
+                        if ext == 'csv':
+                            df = pd.read_csv(input_file)
+                        else:
+                            df = pd.read_excel(input_file)
+                        col = None
+                        for candidate in ['sequence', 'seq', 'dna', 'Sequence', 'Seq']:
+                            if candidate in df.columns:
+                                col = candidate
+                                break
+                        if col is None:
+                            # fallback to first column
+                            col = df.columns[0]
+                        sequences = df[col].astype(str).tolist()
+                        out_fasta = os.path.join(converted_dir, 'input_converted.fasta')
+                        with open(out_fasta, 'w') as f:
+                            for i, s in enumerate(sequences):
+                                s_clean = ''.join(ch for ch in s.upper() if ch in 'ACGTN')
+                                if not s_clean:
+                                    continue
+                                f.write(f'>seq_{i}\n{s_clean}\n')
+                        input_file = out_fasta
+                    elif ext in ['fastq', 'fq']:
+                        # Simple fastq -> fasta conversion with basic length filter
+                        out_fasta = os.path.join(converted_dir, 'input_converted.fasta')
+                        count = 0
+                        with open(out_fasta, 'w') as out_handle:
+                            for record in SeqIO.parse(input_file, 'fastq'):
+                                seq_str = str(record.seq).upper()
+                                if len(seq_str) >= 50:
+                                    rid = record.id or f'read_{count}'
+                                    out_handle.write(f'>{rid}\n{seq_str}\n')
+                                    count += 1
+                        if count > 0:
+                            input_file = out_fasta
                 except Exception:
+                    # If conversion fails, proceed with original file
                     pass
-
-                # Create notification
-                notification = Notification(
-                    user_id=current_user.id,
-                    message=f'Analysis of {sample.name} completed successfully',
-                    link=url_for('analysis_results', analysis_id=new_analysis.id)
-                )
-                db.session.add(notification)
-                db.session.commit()
+                # Start async pipeline execution
+                # Note: We need to pass the real application object to the thread, not the proxy
+                import flask
+                real_app = flask.current_app._get_current_object()
                 
-                flash('Analysis completed successfully', 'success')
+                thread = threading.Thread(
+                    target=run_pipeline_async,
+                    args=(real_app, new_analysis.id, project.id, current_user.id, sample.id, input_file, output_dir)
+                )
+                thread.start()
+                
+                # Redirect directly to results page which will auto-refresh
                 return redirect(url_for('analysis_results', analysis_id=new_analysis.id))
                 
             except Exception as e:
                 new_analysis.status = 'failed'
                 new_analysis.error_message = str(e)
+                new_analysis.completed_at = datetime.utcnow()
                 db.session.commit()
                 
                 flash(f'Analysis failed: {str(e)}', 'danger')
                 return redirect(url_for('project_detail', project_id=project.id))
             
         return render_template('analyze_sample.html', sample=sample, project=project)
-    
+
     # 5. Results & Visualization
     @app.route('/analyses/<int:analysis_id>/results')
     @login_required
@@ -868,13 +1064,99 @@ def register_routes(app):
             flash('You do not have access to these results', 'danger')
             return redirect(url_for('projects'))
             
-        # Load results data (this would be customized based on your actual result format)
+        # Load results data from CSV if available
         results_data = {
             'taxonomy_tree': [],
             'abundance_charts': [],
             'community_comparison': [],
-            'novel_clusters': []
+            'novel_clusters': [],
+            'rows': [],
+            # Cluster-level summary for the results table
+            'cluster_rows': []
         }
+        
+        try:
+            if analysis.status == 'completed' and analysis.result_path:
+                # Construct path to final_results.csv
+                # analysis.result_path is relative to UPLOAD_FOLDER (e.g., user_id/project_id/analysis/analysis_id)
+                # Check in results subdirectory first (new pipeline)
+                csv_path = os.path.join(app.config['UPLOAD_FOLDER'], analysis.result_path, 'results', 'final_results.csv')
+                if not os.path.exists(csv_path):
+                    # Fallback to root (old pipeline)
+                    csv_path = os.path.join(app.config['UPLOAD_FOLDER'], analysis.result_path, 'final_results.csv')
+                
+                if os.path.exists(csv_path):
+                    df = pd.read_csv(csv_path)
+                    # Convert to list of dicts for template
+                    results_data['rows'] = df.to_dict('records')
+
+                    # Build a cluster-level table view:
+                    # - One row per cluster
+                    # - Taxonomy shows unique BLAST names observed in that cluster
+                    # - Novelty score is average novelty in the cluster
+                    # - Status is the "most severe" among sequences in that cluster
+                    if 'cluster' in df.columns:
+                        def _status_rank(s):
+                            s = str(s or '')
+                            if 'High-Novelty' in s:
+                                return 4
+                            if 'Potential Novel' in s:
+                                return 3
+                            if 'Unknown' in s:
+                                return 2
+                            if 'Variant' in s:
+                                return 1
+                            if 'Known' in s:
+                                return 0
+                            return 2
+
+                        cluster_rows = []
+                        for cluster_id, g in df.groupby('cluster', dropna=False):
+                            taxa = []
+                            if 'scientific_name' in g.columns:
+                                taxa = sorted({str(x).strip() for x in g['scientific_name'].tolist() if str(x).strip()})
+                            taxonomy_display = ", ".join(taxa) if taxa else "Unclassified"
+
+                            novelty_val = None
+                            if 'novelty_score' in g.columns:
+                                try:
+                                    novelty_val = float(g['novelty_score'].mean())
+                                except Exception:
+                                    novelty_val = None
+
+                            # Determine cluster status
+                            statuses = g['status'].tolist() if 'status' in g.columns else []
+                            statuses = [str(s) for s in statuses if s is not None]
+                            if statuses:
+                                status = sorted(statuses, key=_status_rank, reverse=True)[0]
+                            else:
+                                status = "Unknown"
+
+                            # Classification column mirrors status (can be refined later)
+                            cluster_rows.append({
+                                'cluster': int(cluster_id) if str(cluster_id).isdigit() else cluster_id,
+                                'classification': status,
+                                'taxonomy': taxonomy_display,
+                                'novelty_score': novelty_val,
+                                'status': status,
+                            })
+
+                        # Sort clusters numerically when possible
+                        def _cluster_sort_key(r):
+                            try:
+                                return int(r.get('cluster'))
+                            except Exception:
+                                return 10**9
+                        cluster_rows.sort(key=_cluster_sort_key)
+                        results_data['cluster_rows'] = cluster_rows
+                    
+                    # Calculate simple stats for charts if needed
+                    # e.g. novelty distribution
+                    if 'final_status' in df.columns:
+                         results_data['novelty_counts'] = df['final_status'].value_counts().to_dict()
+        except Exception as e:
+            print(f"Error loading analysis results: {e}")
+            flash('Error loading analysis results.', 'warning')
         
         # Get comments for this analysis
         comments = Comment.query.filter_by(analysis_id=analysis_id).order_by(Comment.created_at).all()
@@ -1138,11 +1420,6 @@ def register_routes(app):
         
         return redirect(url_for('notifications'))
     
-    @app.route('/badges')
-    @login_required
-    def badges():
-        flash('Badges feature has been removed.', 'info')
-        return redirect(url_for('dashboard'))
     
     @app.route('/language/<lang>')
     def set_language(lang):

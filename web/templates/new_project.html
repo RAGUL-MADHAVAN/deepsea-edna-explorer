@@ -12,21 +12,23 @@
                 <li class="breadcrumb-item active" aria-current="page">New Project</li>
             </ol>
         </nav>
-        <h1 class="display-5 fw-bold">Create New Project</h1>
-        <p class="lead">Start a new deep-sea eDNA research project and begin analyzing samples.</p>
+        <div class="page-header">
+            <h1 class="display-6 fw-bold mb-1">Create New Project</h1>
+            <p class="text-muted mb-0">Start a new deep-sea eDNA research project and begin analyzing samples.</p>
+        </div>
     </div>
 </div>
 
 <div class="row">
     <div class="col-md-8">
-        <div class="card">
+        <div class="card ocean-card">
             <div class="card-body">
                 <form method="POST" action="{{ url_for('new_project') }}">
                     {{ form.hidden_tag() }}
                     
                     <div class="mb-3">
                         <label for="title" class="form-label">Project Title*</label>
-                        {{ form.title(class="form-control", placeholder="Enter a descriptive title for your project") }}
+                        {{ form.title(class="form-control ocean-input", placeholder="Enter a descriptive title for your project") }}
                         {% if form.title.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.title.errors %}
@@ -38,7 +40,7 @@
                     
                     <div class="mb-3">
                         <label for="description" class="form-label">Project Description*</label>
-                        {{ form.description(class="form-control", rows=4, placeholder="Describe the goals and scope of your project") }}
+                        {{ form.description(class="form-control ocean-input", rows=4, placeholder="Describe the goals and scope of your project") }}
                         {% if form.description.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.description.errors %}
@@ -48,18 +50,9 @@
                         {% endif %}
                     </div>
                     
-                    <div class="mb-3 form-check">
-                        {{ form.is_public(class="form-check-input") }}
-                        <label class="form-check-label" for="is_public">{{ form.is_public.label }}</label>
-                    </div>
-                    
-                    <div class="mb-3">
-                        {{ form.submit(class="btn btn-primary") }}
-                    </div>
-                    
                     <div class="mb-3">
                         <label for="location" class="form-label">Sampling Location</label>
-                        {{ form.location(class="form-control", placeholder="e.g., Mariana Trench, North Atlantic, etc.") }}
+                        {{ form.location(class="form-control ocean-input", placeholder="e.g., Mariana Trench, North Atlantic, etc.") }}
                         {% if form.location.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.location.errors %}
@@ -72,7 +65,7 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="depth_min" class="form-label">Minimum Depth (m)</label>
-                            {{ form.depth_min(class="form-control", placeholder="e.g., 1000") }}
+                            {{ form.depth_min(class="form-control ocean-input", placeholder="e.g., 1000") }}
                             {% if form.depth_min.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in form.depth_min.errors %}
@@ -83,7 +76,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="depth_max" class="form-label">Maximum Depth (m)</label>
-                            {{ form.depth_max(class="form-control", placeholder="e.g., 2500") }}
+                            {{ form.depth_max(class="form-control ocean-input", placeholder="e.g., 2500") }}
                             {% if form.depth_max.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in form.depth_max.errors %}
@@ -96,7 +89,7 @@
                     
                     <div class="mb-3">
                         <label for="tags" class="form-label">Tags</label>
-                        {{ form.tags(class="form-control", placeholder="e.g., hydrothermal vents, abyssal plain, cold seeps") }}
+                        {{ form.tags(class="form-control ocean-input", placeholder="e.g., hydrothermal vents, abyssal plain, cold seeps") }}
                         <div class="form-text">Separate tags with commas</div>
                         {% if form.tags.errors %}
                         <div class="invalid-feedback d-block">
@@ -119,7 +112,7 @@
                     
                     <div class="mb-3">
                         <label for="collaborators" class="form-label">Invite Collaborators</label>
-                        {{ form.collaborators(class="form-control", placeholder="Enter email addresses") }}
+                        {{ form.collaborators(class="form-control ocean-input", placeholder="Enter email addresses") }}
                         <div class="form-text">Separate email addresses with commas</div>
                         {% if form.collaborators.errors %}
                         <div class="invalid-feedback d-block">
@@ -140,7 +133,7 @@
     </div>
     
     <div class="col-md-4">
-        <div class="card mb-4">
+        <div class="card ocean-card mb-4">
             <div class="card-header">
                 <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Project Guidelines</h5>
             </div>
@@ -156,7 +149,7 @@
             </div>
         </div>
         
-        <div class="card">
+        <div class="card ocean-card">
             <div class="card-header">
                 <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>What's Next?</h5>
             </div>
