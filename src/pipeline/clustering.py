@@ -60,7 +60,9 @@ class ClusterAnalysis:
         # UMAP for visualization (2D) (optional)
         # IMPORTANT: For tiny datasets, UMAP import/runtime can be slow/hang on some Windows setups.
         # For n<50, we always use PCA(2D) for visualization (fast, deterministic).
-        if n_samples < 50:
+        if n_samples < 2:
+            umap_embeddings = np.zeros((n_samples, 2), dtype=float)
+        elif n_samples < 50:
             pca_2d = PCA(n_components=2)
             umap_embeddings = pca_2d.fit_transform(embeddings)
         else:
@@ -134,8 +136,10 @@ class ClusterAnalysis:
         Here we measure distance to nearest neighbors and cluster density.
         """
         # Distance to 5th nearest neighbor as a proxy for isolation
-        if index is not None:
-            D, _ = index.search(embeddings.astype(np.float32, copy=False), k=6)  # k=6 because 1st is self
+        if embeddings.shape[0] == 1:
+            mean_dist = np.ones((1,), dtype=float)
+        elif index is not None:
+            D, _ = index.search(embeddings.astype(np.float32, copy=False), k=6)
             mean_dist = np.mean(D[:, 1:], axis=1)
         else:
             from sklearn.neighbors import NearestNeighbors
@@ -143,7 +147,7 @@ class ClusterAnalysis:
             nn.fit(embeddings)
             D, _ = nn.kneighbors(embeddings)
             if D.shape[1] <= 1:
-                mean_dist = np.zeros((embeddings.shape[0],), dtype=float)
+                mean_dist = np.ones((embeddings.shape[0],), dtype=float)
             else:
                 mean_dist = np.mean(D[:, 1:], axis=1)
         

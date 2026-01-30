@@ -95,13 +95,16 @@ class TaxonomyClassifier:
                         hsp = alignment.hsps[0]
                         scientific_name = _extract_scientific_name(alignment.hit_def)
                         identity_percent = (hsp.identities / hsp.align_length) * 100
+                        query_len = len(seq_record.seq)
+                        query_coverage = (hsp.align_length / query_len) * 100 if query_len > 0 else 0.0
                         results.append({
                             'query_id': seq_record.id,
                             'scientific_name': scientific_name,
                             'taxonomic_rank': _infer_taxonomic_rank(scientific_name, alignment.hit_def),
                             'hit_def': alignment.hit_def,
                             'e_value': hsp.expect,
-                            'identity_percent': identity_percent
+                            'identity_percent': identity_percent,
+                            'query_coverage': query_coverage
                         })
                     else:
                         results.append({
@@ -110,7 +113,8 @@ class TaxonomyClassifier:
                             'taxonomic_rank': 'unknown',
                             'hit_def': 'No match found',
                             'e_value': None,
-                            'identity_percent': 0.0
+                            'identity_percent': 0.0,
+                            'query_coverage': 0.0
                         })
                 except Exception as e:
                     logger.error(f"Remote BLAST failed, falling back to Unclassified ({seq_record.id}): {e}")
@@ -120,7 +124,8 @@ class TaxonomyClassifier:
                         'taxonomic_rank': 'unknown',
                         'hit_def': 'Remote BLAST failed or unavailable',
                         'e_value': None,
-                        'identity_percent': 0.0
+                        'identity_percent': 0.0,
+                        'query_coverage': 0.0
                     })
                     
             df = pd.DataFrame(results)
@@ -142,7 +147,8 @@ class TaxonomyClassifier:
                 'taxonomic_rank': 'unknown',
                 'hit_def': 'No BLAST available',
                 'e_value': None,
-                'identity_percent': 0.0
+                'identity_percent': 0.0,
+                'query_coverage': 0.0
             })
         df = pd.DataFrame(results)
         df.to_csv(self.output_dir / "taxonomy_assignments.csv", index=False)
@@ -159,13 +165,19 @@ class TaxonomyClassifier:
                     hsp = alignment.hsps[0]
                     scientific_name = _extract_scientific_name(alignment.hit_def)
                     identity_percent = (hsp.identities / hsp.align_length) * 100
+                    try:
+                        qlen = int(record.query_length)
+                    except Exception:
+                        qlen = 0
+                    query_coverage = (hsp.align_length / qlen) * 100 if qlen > 0 else 0.0
                     results.append({
                         'query_id': record.query,
                         'scientific_name': scientific_name,
                         'taxonomic_rank': _infer_taxonomic_rank(scientific_name, alignment.hit_def),
                         'hit_def': alignment.hit_def,
                         'e_value': hsp.expect,
-                        'identity_percent': identity_percent
+                        'identity_percent': identity_percent,
+                        'query_coverage': query_coverage
                     })
                 else:
                     results.append({
@@ -174,7 +186,8 @@ class TaxonomyClassifier:
                         'taxonomic_rank': 'unknown',
                         'hit_def': 'No match found',
                         'e_value': None,
-                        'identity_percent': 0.0
+                        'identity_percent': 0.0,
+                        'query_coverage': 0.0
                     })
         
         df = pd.DataFrame(results)

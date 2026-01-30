@@ -100,7 +100,20 @@ class PipelineManager:
             ids.append(record.id)
             
         if not sequences:
-            raise ValueError("No valid sequences remaining after processing.")
+            logger.warning("No valid sequences remaining after processing. Writing empty results for traceability.")
+            results_dir = self.output_dir / "results"
+            results_dir.mkdir(parents=True, exist_ok=True)
+            import pandas as pd
+            empty = pd.DataFrame(columns=[
+                'sequence_id','cluster','x','y','novelty_score',
+                'scientific_name','confidence','hit_def','e_value','identity_percent',
+                'taxonomic_rank','query_coverage','count','relative_abundance',
+                'classification','status'
+            ])
+            final_csv = results_dir / "final_results.csv"
+            empty.to_csv(final_csv, index=False)
+            logger.info(f"Wrote empty results CSV at {final_csv}")
+            return final_csv, pd.DataFrame(), pd.DataFrame()
             
         logger.info(f"Proceeding to AI analysis with {len(sequences)} sequences.")
         
@@ -142,12 +155,16 @@ class PipelineManager:
             if not taxonomy_df.empty:
                 for _, row in taxonomy_df.iterrows():
                     identity_percent = row.get('identity_percent', 0.0) or row.get('identity', 0.0)
+                    tax_rank = row.get('taxonomic_rank', 'unknown')
+                    qcov = float(row.get('query_coverage', 0.0) or 0.0)
                     taxonomy_map[row['query_id']] = {
                         'scientific_name': row['scientific_name'],
                         'confidence': float(identity_percent),
                         'hit_def': row.get('hit_def', ''),
                         'e_value': row.get('e_value', None),
                         'identity_percent': float(identity_percent),
+                        'taxonomic_rank': tax_rank,
+                        'query_coverage': qcov,
                     }
             
             # Apply taxonomy directly to each sequence
@@ -157,6 +174,8 @@ class PipelineManager:
             final_results['hit_def'] = final_results['sequence_id'].map(lambda sid: taxonomy_map.get(sid, {}).get('hit_def', ''))
             final_results['e_value'] = final_results['sequence_id'].map(lambda sid: taxonomy_map.get(sid, {}).get('e_value', None))
             final_results['identity_percent'] = final_results['sequence_id'].map(lambda sid: taxonomy_map.get(sid, {}).get('identity_percent', 0.0))
+            final_results['taxonomic_rank'] = final_results['sequence_id'].map(lambda sid: taxonomy_map.get(sid, {}).get('taxonomic_rank', 'unknown'))
+            final_results['query_coverage'] = final_results['sequence_id'].map(lambda sid: taxonomy_map.get(sid, {}).get('query_coverage', 0.0))
         else:
             # Original representative-based approach (for large datasets)
             logger.info(f"Using representative-based BLAST ({n_clusters} clusters from {n_sequences} sequences) for efficiency.")
@@ -199,6 +218,8 @@ class PipelineManager:
                             'hit_def': row.get('hit_def', ''),
                             'e_value': row.get('e_value', None),
                             'identity_percent': float(identity_percent),
+                            'taxonomic_rank': row.get('taxonomic_rank', 'unknown'),
+                            'query_coverage': float(row.get('query_coverage', 0.0) or 0.0),
                         }
                         
             # 2. Apply to all sequences
@@ -208,6 +229,8 @@ class PipelineManager:
             final_results['hit_def'] = final_results['cluster'].map(lambda c: cluster_tax_map.get(c, {}).get('hit_def', ''))
             final_results['e_value'] = final_results['cluster'].map(lambda c: cluster_tax_map.get(c, {}).get('e_value', None))
             final_results['identity_percent'] = final_results['cluster'].map(lambda c: cluster_tax_map.get(c, {}).get('identity_percent', 0.0))
+            final_results['taxonomic_rank'] = final_results['cluster'].map(lambda c: cluster_tax_map.get(c, {}).get('taxonomic_rank', 'unknown'))
+            final_results['query_coverage'] = final_results['cluster'].map(lambda c: cluster_tax_map.get(c, {}).get('query_coverage', 0.0))
         
         # --- Step 6: Final Integration ---
         logger.info("--- Step 6: Final Integration ---")
@@ -219,19 +242,48 @@ class PipelineManager:
             final_results['relative_abundance'] = final_results['relative_abundance'].fillna(0)
             
         # 4. Determine Status
-        def determine_status(row):
-            if row['scientific_name'] == 'Unclassified':
-                if row['novelty_score'] > 0.8: return "High-Novelty Candidate"
-                if row['novelty_score'] > 0.5: return "Potential Novel Species"
-                return "Unknown"
-            else:
-                if row['confidence'] < 90: return "Variant / Strain"
+        def determine_classification(row):
+            name = str(row.get('scientific_name', '')).strip()
+            rank = str(row.get('taxonomic_rank', 'unknown'))
+            identity = float(row.get('identity_percent', 0.0) or 0.0)
+            coverage = float(row.get('query_coverage', 0.0) or 0.0)
+            tokens = [t for t in name.split() if t]
+            is_binomial = len(tokens) >= 2 and tokens[1].lower() not in ['sp.', 'cf.', 'aff.']
+            ends_family = name.endswith('idae') or ' family' in name.lower()
+            if is_binomial and identity >= 97.0 and coverage >= 90.0:
                 return "Known Species"
-                
+            if identity >= 95.0:
+                return "Known Genus"
+            if ends_family or rank == 'family':
+                if identity >= 90.0:
+                    return "Known Family"
+            return "Potential Novel Taxon"
+        final_results['classification'] = final_results.apply(determine_classification, axis=1)
+        def determine_status(row):
+            c = row['classification']
+            if c == "Known Species":
+                return "Known"
+            if c in ["Known Genus", "Known Family"]:
+                return "Partially Known"
+            return "Novel Candidate"
         final_results['status'] = final_results.apply(determine_status, axis=1)
+        def adjust_novelty(row):
+            c = row['classification']
+            n = float(row.get('novelty_score', 0.0) or 0.0)
+            if c == "Known Species":
+                return max(0.0, min(n, 0.10))
+            if c == "Known Genus":
+                return 0.30 if n == 0.0 else max(0.20, min(n, 0.40))
+            if c == "Known Family":
+                return 0.55 if n == 0.0 else max(0.40, min(n, 0.70))
+            return max(0.80, min(n, 1.0))
+        if 'novelty_score' in final_results.columns:
+            final_results['novelty_score'] = final_results.apply(adjust_novelty, axis=1)
         
         # Save Final Results
-        final_csv = self.output_dir / "results" / "final_results.csv"
+        results_dir = self.output_dir / "results"
+        results_dir.mkdir(parents=True, exist_ok=True)
+        final_csv = results_dir / "final_results.csv"
         final_results.to_csv(final_csv, index=False)
 
         # --- Step 7: Biodiversity metrics & abundance by taxonomy ---
