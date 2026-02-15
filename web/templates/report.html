@@ -1,0 +1,400 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Analysis Report{% endblock %}
+
+{% block content %}
+<div class="print-only mb-3">
+  <h2 class="fw-bold">DeepSea eDNA Explorer – Analysis Report</h2>
+  <div>Analysis {{ analysis.id }} • Sample: {{ sample.name }} • {{ (analysis.completed_at or analysis.created_at)|datetimeformat('%Y-%m-%d') }}</div>
+</div>
+<div class="page-header mb-4 screen-only">
+  <div class="d-flex justify-content-between align-items-start">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder me-1"></i>{{ project.title }}</a></li>
+          <li class="breadcrumb-item"><a href="{{ url_for('analysis_results', analysis_id=analysis.id) }}" class="text-primary"><i class="fas fa-flask me-1"></i>Analysis {{ analysis.id }}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Report</li>
+        </ol>
+      </nav>
+      <h1 class="display-6 fw-bold text-primary mb-1"><i class="fas fa-file-alt me-2"></i>Analysis Report</h1>
+      <p class="mb-0 text-muted">Comprehensive summary of analysis {{ analysis.id }}</p>
+    </div>
+    <div class="btn-group">
+      <button class="btn ocean-button" onclick="window.print()"><i class="fas fa-file-pdf me-1"></i>Download PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- 1️⃣ Summary -->
+<div class="row g-4">
+  <div class="col-12">
+    <div class="ocean-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-info-circle me-2 text-primary"></i>Basic Metadata</h5>
+        <span class="ocean-badge {% if analysis.status=='completed' %}bg-success{% elif analysis.status=='failed' %}bg-danger{% else %}bg-secondary{% endif %}">
+          <i class="fas fa-check-circle me-1"></i>{{ analysis.status|capitalize }}
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3"><div class="small text-muted">File name</div><div class="fw-semibold">{{ sample.get_file_name() or sample.name }}</div></div>
+          <div class="col-md-3"><div class="small text-muted">Analysis date</div><div class="fw-semibold">{{ (analysis.completed_at or analysis.created_at) }}</div></div>
+          {% if report_data and report_data.total_reads is not none %}
+          <div class="col-md-2"><div class="small text-muted">Total reads</div><div class="fw-semibold">{{ report_data.total_reads }}</div></div>
+          {% endif %}
+          {% if report_data and report_data.amplicon_reads is not none %}
+          <div class="col-md-2"><div class="small text-muted">Amplicon reads</div><div class="fw-semibold">{{ report_data.amplicon_reads }}</div></div>
+          {% endif %}
+          {% if report_data and report_data.shotgun_reads is not none %}
+          <div class="col-md-2"><div class="small text-muted">Shotgun reads</div><div class="fw-semibold">{{ report_data.shotgun_reads }}</div></div>
+          {% endif %}
+          {% if report_data and report_data.tools_used and report_data.tools_used|length > 0 %}
+            <div class="col-md-12">
+              <div class="small text-muted mb-1">Tools detected</div>
+              <div class="d-flex flex-wrap gap-2">
+                {% for tool in report_data.tools_used %}
+                <span class="ocean-badge bg-primary"><i class="fas fa-wrench"></i>{{ tool }}</span>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+        <div class="stat-grid">
+          {% if report_data and report_data.clustering and report_data.clustering.total_clusters is not none %}
+          <div class="stat-tile">
+            <div class="label">Total clusters</div>
+            <div class="value">{{ report_data.clustering.total_clusters }}</div>
+          </div>
+          {% endif %}
+          {% if report_data and report_data.clustering and report_data.clustering.noise_points is not none %}
+          <div class="stat-tile">
+            <div class="label">Noise points</div>
+            <div class="value">{{ report_data.clustering.noise_points }}</div>
+          </div>
+          {% endif %}
+          {% if report_data and report_data.novelty and report_data.novelty.avg_score is not none %}
+          <div class="stat-tile">
+            <div class="label">Avg novelty score</div>
+            <div class="value">{{ report_data.novelty.avg_score|numberformat(3) }}</div>
+          </div>
+          {% endif %}
+          {% if report_data and report_data.total_reads is not none %}
+          <div class="stat-tile">
+            <div class="label">Total reads</div>
+            <div class="value">{{ report_data.total_reads }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2️⃣ Taxonomic Classification -->
+  <div class="col-12">
+    <div class="ocean-card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-dna me-2 text-primary"></i>Taxonomic Classification</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped mb-0">
+            <thead>
+              <tr>
+                <th>Species</th>
+                <th>Genus</th>
+                <th>Family</th>
+                <th>Confidence</th>
+                <th>Abundance %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if report_data and report_data.taxonomy_rows and report_data.taxonomy_rows|length > 0 %}
+                {% for r in report_data.taxonomy_rows %}
+                <tr>
+                  <td>{{ r.species or 'N/A' }}</td>
+                  <td>{{ r.genus or 'N/A' }}</td>
+                  <td>{{ r.family or 'N/A' }}</td>
+                  <td>
+                    {% if r.confidence is not none %}
+                      {{ r.confidence|numberformat(2) }}
+                    {% else %}
+                      N/A
+                    {% endif %}
+                  </td>
+                  <td>{{ r.abundance_pct and ('%.1f'|format(r.abundance_pct)) or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="5" class="text-center text-muted">No taxonomic assignments found</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3️⃣ Novelty Detection -->
+  {% set has_novelty = report_data and (report_data.novelty.avg_score is not none
+      or report_data.novelty.embedding_distance is not none
+      or report_data.novelty.top_cluster_id is not none
+      or report_data.novelty.top_cluster_size is not none) %}
+  {% if has_novelty %}
+  <div class="col-12">
+    <div class="ocean-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-asterisk me-2 text-primary"></i>Novelty Detection</h5>
+        {% if analysis.analysis_type == 'novel' %}
+        <span class="ocean-badge bg-warn"><i class="fas fa-lightbulb me-1"></i>Type: Novel</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% if report_data.novelty.avg_score is not none %}
+          <div class="col-md-3"><div class="small text-muted">Avg novelty score</div><div class="fw-semibold">{{ report_data.novelty.avg_score|numberformat(3) }}</div></div>
+          {% endif %}
+          {% if report_data.novelty.embedding_distance is not none %}
+          <div class="col-md-3"><div class="small text-muted">Embedding distance</div><div class="fw-semibold">{{ report_data.novelty.embedding_distance }}</div></div>
+          {% endif %}
+          {% if report_data.novelty.top_cluster_id is not none %}
+          <div class="col-md-3"><div class="small text-muted">Top cluster ID</div><div class="fw-semibold">{{ report_data.novelty.top_cluster_id }}</div></div>
+          {% endif %}
+          {% if report_data.novelty.top_cluster_size is not none %}
+          <div class="col-md-3"><div class="small text-muted">Top cluster size</div><div class="fw-semibold">{{ report_data.novelty.top_cluster_size }}</div></div>
+          {% endif %}
+          <div class="col-12 text-muted">High novelty score suggests potential new species.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- 4️⃣ Visualizations -->
+  {% set has_abundance = report_data and report_data.charts and report_data.charts.species_abundance and report_data.charts.species_abundance['labels']|length > 0 %}
+  {% set has_clusters = report_data and report_data.charts and report_data.charts.cluster_counts and report_data.charts.cluster_counts['labels']|length > 0 %}
+  {% set has_novelty_series = report_data and report_data.charts and report_data.charts['novelty_series'] and report_data.charts['novelty_series']|length > 0 %}
+  {% if has_abundance or has_clusters or has_novelty_series %}
+  <div class="col-12">
+    <div class="ocean-card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-chart-pie me-2 text-primary"></i>Visualizations</h5>
+      </div>
+      <div class="card-body">
+        <div class="report-visuals">
+          {% if has_abundance %}
+          <div class="chart-box">
+            <div class="small text-muted">Abundance Pie</div>
+            <canvas id="pieChart" class="chart-canvas"></canvas>
+          </div>
+          {% endif %}
+          {% if has_clusters %}
+          <div class="chart-box">
+            <div class="small text-muted">Read Count Bar</div>
+            <canvas id="barChart" class="chart-canvas"></canvas>
+          </div>
+          {% endif %}
+          {% if has_novelty_series %}
+          <div class="chart-box">
+            <div class="small text-muted">Novelty Scores</div>
+            <canvas id="lineChart" class="chart-canvas"></canvas>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- 5️⃣ Clustering Analytics -->
+  {% set c = report_data.clustering %}
+  {% if c.total_clusters is not none or c.noise_points is not none or c.silhouette_score is not none or c.hdbscan_params %}
+  <div class="col-12">
+    <div class="ocean-card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-project-diagram me-2 text-primary"></i>Embedding & Clustering Analytics</h5>
+      </div>
+      <div class="card-body">
+        <div class="stat-grid">
+          {% if c.total_clusters is not none %}
+          <div class="stat-tile"><div class="label">Total clusters</div><div class="value">{{ c.total_clusters }}</div></div>
+          {% endif %}
+          {% if c.noise_points is not none %}
+          <div class="stat-tile"><div class="label">Noise points</div><div class="value">{{ c.noise_points }}</div></div>
+          {% endif %}
+          {% if c.silhouette_score is not none %}
+          <div class="stat-tile"><div class="label">Silhouette score</div><div class="value">{{ c.silhouette_score|numberformat(2) }}</div></div>
+          {% endif %}
+          {% if c.hdbscan_params %}
+          <div class="stat-tile"><div class="label">HDBSCAN params</div><div class="value">{{ c.hdbscan_params }}</div></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- 6️⃣ Functional Insight -->
+  <div class="col-12">
+    <div class="ocean-card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-brain me-2 text-primary"></i>Functional Insight</h5>
+      </div>
+      <div class="card-body">
+        <p class="mb-0 text-muted">No functional annotations available.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7️⃣ Quality Control -->
+  {% set qc = report_data.qc %}
+  {% if qc.reads_removed_pct is not none or qc.low_quality_pct is not none or qc.host_contam_pct is not none %}
+  <div class="col-12">
+    <div class="ocean-card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-shield-alt me-2 text-primary"></i>Quality Control</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% if qc.reads_removed_pct is not none %}
+          <div class="col-md-4"><div class="small text-muted">Reads removed</div><div class="fw-semibold">{{ qc.reads_removed_pct }}</div></div>
+          {% endif %}
+          {% if qc.low_quality_pct is not none %}
+          <div class="col-md-4"><div class="small text-muted">Low quality discarded</div><div class="fw-semibold">{{ qc.low_quality_pct }}</div></div>
+          {% endif %}
+          {% if qc.host_contam_pct is not none %}
+          <div class="col-md-4"><div class="small text-muted">Host contamination removed</div><div class="fw-semibold">{{ qc.host_contam_pct }}</div></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- 8️⃣ Confidence & Reliability -->
+  {% set conf = report_data.confidence %}
+  {% if conf.bootstrap is not none or conf.cross_evidence is not none %}
+  <div class="col-12">
+    <div class="ocean-card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-check-double me-2 text-primary"></i>Confidence & Reliability</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% if conf.bootstrap is not none %}
+          <div class="col-md-6"><div class="small text-muted">Bootstrap confidence</div><div class="fw-semibold">{{ conf.bootstrap }}</div></div>
+          {% endif %}
+          {% if conf.cross_evidence is not none %}
+          <div class="col-md-6"><div class="small text-muted">Cross-evidence validation</div><div class="fw-semibold">{{ conf.cross_evidence }}</div></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Optional charts via CDN; page remains readable without it -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  (function(){
+    if(!window.Chart) return;
+    const pieCtx = document.getElementById('pieChart');
+    const barCtx = document.getElementById('barChart');
+    const lineCtx = document.getElementById('lineChart');
+    const speciesLabels = {{ (report_data.charts.species_abundance['labels'] if report_data else [])|tojson }};
+    const speciesVals = {{ (report_data.charts.species_abundance['values'] if report_data else [])|tojson }};
+    const clusterLabels = {{ (report_data.charts.cluster_counts['labels'] if report_data else [])|tojson }};
+    const clusterVals = {{ (report_data.charts.cluster_counts['values'] if report_data else [])|tojson }};
+    const noveltySeries = {{ (report_data.charts['novelty_series'] if report_data else [])|tojson }};
+    const palette = {
+      blue: '#0ea5e9',
+      blueDark: '#0a4d68',
+      teal: '#14b8a6',
+      cyan: '#22d3ee',
+      indigo: '#6366f1',
+      amber: '#f59e0b',
+      grid: '#e5eef5'
+    };
+    const commonOpts = {
+      responsive:true,
+      maintainAspectRatio:false,
+      layout:{padding:8},
+      plugins:{legend:{position:'bottom', labels:{boxWidth:12, boxHeight:12, usePointStyle:true}}}
+    };
+    if (speciesLabels.length && speciesVals.length) {
+      new Chart(pieCtx,{
+        type:'pie',
+        data:{
+          labels:speciesLabels,
+          datasets:[{
+            data:speciesVals,
+            backgroundColor:[palette.blue,palette.teal,palette.cyan,palette.indigo,palette.amber],
+            borderColor:'#ffffff',
+            borderWidth:2
+          }]
+        },
+        options:{
+          ...commonOpts,
+          plugins:{...commonOpts.plugins, title:{display:true, text:'Abundance'}}
+        }
+      });
+    }
+    if (clusterLabels.length && clusterVals.length) {
+      new Chart(barCtx,{
+        type:'bar',
+        data:{
+          labels:clusterLabels,
+          datasets:[{
+            label:'Reads',
+            data:clusterVals,
+            backgroundColor:palette.blue,
+            borderRadius:8,
+            maxBarThickness:40
+          }]
+        },
+        options:{
+          ...commonOpts,
+          plugins:{...commonOpts.plugins, title:{display:true, text:'Read Count'}},
+          scales:{
+            x:{grid:{display:false}},
+            y:{grid:{color:palette.grid}, ticks:{precision:0, stepSize:1}}
+          }
+        }
+      });
+    }
+    if (noveltySeries.length) {
+      const labels = noveltySeries.map((_,i)=>i+1);
+      new Chart(lineCtx,{
+        type:'line',
+        data:{
+          labels,
+          datasets:[{
+            label:'Novelty',
+            data:noveltySeries,
+            borderColor:palette.blueDark,
+            backgroundColor:palette.teal,
+            pointRadius:4,
+            pointHoverRadius:5,
+            tension:0.35
+          }]
+        },
+        options:{
+          ...commonOpts,
+          plugins:{...commonOpts.plugins, title:{display:true, text:'Novelty Score'}},
+          scales:{
+            x:{grid:{color:palette.grid}},
+            y:{grid:{color:palette.grid}, min:0, max:1}
+          }
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}

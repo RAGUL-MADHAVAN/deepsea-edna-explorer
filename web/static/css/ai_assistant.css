@@ -11,6 +11,42 @@
     position: relative;
 }
 
+#aiChatCard .card-header {
+    background: linear-gradient(135deg, #0a4d68, #088395);
+    box-shadow: 0 8px 18px rgba(2, 8, 23, 0.12);
+    padding: 14px 22px;
+}
+#aiChatCard .chat-actions .btn {
+    height: 36px;
+    width: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+#aiChatCard .chat-container {
+    height: 520px;
+    background: #f8fcff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 22px;
+}
+#aiChatCard .card-footer .input-group .form-control {
+    border-radius: 999px 0 0 999px;
+}
+#aiChatCard .card-footer .btn {
+    border-radius: 0 999px 999px 0;
+    padding: 0 18px;
+}
+
+#aiContextCard .card-header,
+#aiToolsCard .card-header {
+    padding: 14px 22px;
+}
+#aiContextCard .card-body,
+#aiToolsCard .card-body {
+    padding: 18px 22px;
+}
+
 /* Chat section */
 .chat-section {
     flex: 1;
@@ -134,6 +170,23 @@
 .assistant-message .message-content {
     background-color: #e6f7ff;
     border: 1px solid #b3e0ff;
+}
+
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.tools-grid .list-group-item {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 6px 14px rgba(2, 8, 23, 0.06);
+    transition: transform .2s ease, box-shadow .2s ease;
+    padding: 12px 16px;
+}
+.tools-grid .list-group-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 28px rgba(2, 8, 23, 0.12);
 }
 
 .user-message .message-content {

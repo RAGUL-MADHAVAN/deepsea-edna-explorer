@@ -1,0 +1,5 @@
+query_id,scientific_name,taxonomic_rank,hit_def,e_value,identity_percent,query_coverage
+ASV_1;size=1,Lonchaeidae sp.,species,"Lonchaeidae sp. BIOUG22447-F03 cytochrome oxidase subunit 1 (COI) gene, partial cds; mitochondrial",1.42946e-47,94.65648854961832,53.90946502057613
+ASV_2;size=1,Unclassified,unknown,No match found,,0.0,0.0
+ASV_3;size=1,PREDICTED: Triticum,species,"PREDICTED: Triticum dicoccoides UDP-glycosyltransferase 73C5-like (LOC119310182), mRNA",3.36137,88.88888888888889,30.508474576271187
+ASV_4;size=1,Escherichia coli,species,"Escherichia coli 16S rRNA gene, strain BL21",0.0,100.0,100.0

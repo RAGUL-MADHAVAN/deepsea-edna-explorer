@@ -3,26 +3,20 @@
 {% block title %}DeepSea eDNA Explorer - Sample Details{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder me-1"></i>{{ project.title }}</a></li>
-                <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-flask me-1"></i>{{ sample.name }}</li>
-            </ol>
-        </nav>
-    </div>
-</div>
-
-<div class="row align-items-center mb-4">
-    <div class="col-md-8">
-        <h1 class="display-5 fw-bold text-primary"><i class="fas fa-flask me-2 pulse-icon"></i>{{ sample.name }}</h1>
-        <p class="lead">{{ sample.description|default('No description provided', true) }}</p>
-        <div class="ocean-divider mb-3"></div>
-    </div>
-    <div class="col-md-4 text-md-end">
+<div class="page-header mb-4">
+    <div class="d-flex justify-content-between align-items-start">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder me-1"></i>{{ project.title }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-flask me-1"></i>{{ sample.name }}</li>
+                </ol>
+            </nav>
+            <h1 class="display-6 fw-bold text-primary mb-1"><i class="fas fa-flask me-2 pulse-icon"></i>{{ sample.name }}</h1>
+            <p class="mb-0 text-muted">{{ sample.description|default('No description provided', true) }}</p>
+        </div>
         <div class="btn-group">
             <a href="{{ url_for('run_analysis', project_id=project.id, sample_id=sample.id) }}" class="btn ocean-button">
                 <i class="fas fa-play-circle me-1 pulse-icon"></i>Run Analysis
@@ -33,9 +27,6 @@
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="{{ url_for('download_sample', project_id=project.id, sample_id=sample.id) }}">
                     <i class="fas fa-download me-2 text-primary"></i>Download Sample
-                </a></li>
-                <li><a class="dropdown-item" href="{{ url_for('edit_sample', project_id=project.id, sample_id=sample.id) }}">
-                    <i class="fas fa-edit me-2 text-primary"></i>Edit Sample
                 </a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteSampleModal">
@@ -48,12 +39,12 @@
 
 <div class="row">
     <div class="col-md-4 mb-4">
-        <div class="ocean-card h-100">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Sample Information</h5>
+        <div class="ocean-card sample-info-card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2 text-primary"></i>Sample Information</h5>
             </div>
             <div class="card-body">
-                <dl class="row mb-0">
+                <dl class="row mb-0 compact-dl">
                     <dt class="col-sm-5 text-primary"><i class="fas fa-calendar-alt me-1"></i>Collection Date:</dt>
                     <dd class="col-sm-7">{{ sample.collection_date|default('Not specified', true) }}</dd>
                     
@@ -70,7 +61,7 @@
                     <dd class="col-sm-7">{{ sample.file_format|upper }}</dd>
                     
                     <dt class="col-sm-5 text-primary"><i class="fas fa-weight me-1"></i>File Size:</dt>
-                    <dd class="col-sm-7">{{ sample.file_size|filesizeformat }}</dd>
+                    <dd class="col-sm-7">{{ sample.get_file_size_display() }}</dd>
                     
                     <dt class="col-sm-5 text-primary"><i class="fas fa-dna me-1"></i>Sequence Count:</dt>
                     <dd class="col-sm-7">{{ sample.sequence_count|default('Not analyzed', true)|numberformat }}</dd>
@@ -90,9 +81,9 @@
     </div>
     
     <div class="col-md-8 mb-4">
-        <div class="ocean-card h-100">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-flask me-2 pulse-icon"></i>Analyses</h5>
+        <div class="ocean-card analyses-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-flask me-2 text-primary pulse-icon"></i>Analyses</h5>
                 <a href="{{ url_for('run_analysis', project_id=project.id, sample_id=sample.id) }}" class="btn btn-sm ocean-button-sm">
                     <i class="fas fa-plus me-1 pulse-icon"></i>New Analysis
                 </a>
@@ -101,7 +92,7 @@
                 {% if analyses %}
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
-                        <thead class="bg-primary text-white">
+                        <thead>
                             <tr>
                                 <th><i class="fas fa-tag me-1"></i>Name</th>
                                 <th><i class="fas fa-cogs me-1"></i>Type</th>
@@ -114,43 +105,42 @@
                             {% for analysis in analyses %}
                             <tr>
                                 <td>
-                                    <a href="{{ url_for('analysis_detail', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}">
-                                        {{ analysis.name }}
+                                    <a href="{{ url_for('analysis_results', analysis_id=analysis.id) }}">
+                                        Analysis {{ analysis.id }}
                                     </a>
-                                    {% if analysis.description %}
-                                    <div class="text-muted small text-truncate" style="max-width: 200px;">
-                                        {{ analysis.description }}
-                                    </div>
-                                    {% endif %}
                                 </td>
                                 <td>{{ analysis.analysis_type }}</td>
                                 <td>
-                                    {% if analysis.status == 'completed' %}
+                                    {% set s = analysis.status|default('', true)|lower %}
+                                    {% if s in ['completed','success'] %}
                                     <span class="ocean-badge bg-success"><i class="fas fa-check-circle me-1"></i>Completed</span>
-                                    {% elif analysis.status == 'failed' %}
+                                    {% elif s in ['failed','error'] %}
                                     <span class="ocean-badge bg-danger"><i class="fas fa-times-circle me-1"></i>Failed</span>
-                                    {% elif analysis.status == 'running' %}
-                                    <span class="ocean-badge bg-primary"><i class="fas fa-spinner fa-spin me-1"></i>Running</span>
-                                    <div class="progress mt-1" style="height: 4px;">
-                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: {{ analysis.progress|default(50, true) }}%"></div>
+                                    {% elif s in ['running','processing','in_progress'] %}
+                                    <span class="ocean-badge bg-warn"><i class="fas fa-spinner fa-spin me-1"></i>Processing</span>
+                                    <div class="progress mt-1 bg-warn-track" style="height: 4px;">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-warn" role="progressbar" style="width: {{ analysis.progress|default(50, true) }}%"></div>
                                     </div>
-                                    {% elif analysis.status == 'queued' %}
+                                    {% elif s in ['queued','pending'] %}
                                     <span class="ocean-badge bg-secondary"><i class="fas fa-clock me-1"></i>Queued</span>
+                                    {% else %}
+                                    <span class="ocean-badge bg-secondary"><i class="fas fa-question-circle me-1"></i>Unknown</span>
                                     {% endif %}
                                 </td>
                                 <td>{{ analysis.created_at|timeago }}</td>
                                 <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ url_for('analysis_detail', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}" class="btn btn-outline-primary" title="View Analysis">
-                                            <i class="fas fa-eye pulse-icon"></i>
+                                    <div class="actions-compact d-flex align-items-center gap-2">
+                                        <a href="{{ url_for('analysis_results', analysis_id=analysis.id) }}" class="icon-btn view" title="View Results" data-bs-toggle="tooltip">
+                                            <i class="fas fa-eye"></i>
                                         </a>
                                         {% if analysis.status == 'completed' %}
-                                        <a href="{{ url_for('download_analysis_results', project_id=project.id, sample_id=sample.id, analysis_id=analysis.id) }}" class="btn btn-outline-primary" title="Download Results">
-                                            <i class="fas fa-download pulse-icon"></i>
+                                        <a href="{{ url_for('download_analysis_report', analysis_id=analysis.id) }}" class="icon-btn download" title="Download Report" data-bs-toggle="tooltip">
+                                            <i class="fas fa-file-download"></i>
                                         </a>
                                         {% endif %}
-                                        <button type="button" class="btn btn-outline-danger" title="Delete Analysis" data-bs-toggle="modal" data-bs-target="#deleteAnalysisModal" data-analysis-id="{{ analysis.id }}" data-analysis-name="{{ analysis.name }}">
-                                            <i class="fas fa-trash-alt pulse-icon"></i>
+                                        <button type="button" class="icon-btn danger" title="Delete Analysis" data-bs-toggle="modal" data-bs-target="#deleteAnalysisModal" data-analysis-id="{{ analysis.id }}" data-analysis-name="{{ analysis.name }}">
+                                            <span data-delete-url="{{ url_for('delete_analysis', analysis_id=analysis.id) }}"></span>
+                                            <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -174,7 +164,7 @@
             </div>
             {% if analyses and analyses|length > 5 %}
             <div class="card-footer text-center">
-                <a href="{{ url_for('sample_analyses', project_id=project.id, sample_id=sample.id) }}" class="btn btn-sm ocean-button-sm"><i class="fas fa-list me-1 pulse-icon"></i>View All Analyses</a>
+                <a href="{{ url_for('analyses') }}" class="btn btn-sm ocean-button-sm"><i class="fas fa-list me-1 pulse-icon"></i>View All Analyses</a>
             </div>
             {% endif %}
         </div>
@@ -184,7 +174,7 @@
 <div class="row">
     <div class="col-md-12 mb-4">
         <div class="ocean-card">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header p-0">
                 <ul class="nav nav-tabs card-header-tabs" id="sampleTabs" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="sequence-preview-tab" data-bs-toggle="tab" data-bs-target="#sequence-preview" type="button" role="tab" aria-controls="sequence-preview" aria-selected="true">
@@ -208,7 +198,7 @@
                 <div class="tab-content" id="sampleTabsContent">
                     <div class="tab-pane fade show active" id="sequence-preview" role="tabpanel" aria-labelledby="sequence-preview-tab">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 text-primary"><i class="fas fa-dna me-2 pulse-icon"></i>Sequence Preview</h5>
+                            <h5 class="mb-0 section-title"><i class="fas fa-dna me-2 text-primary pulse-icon"></i>Sequence Preview</h5>
                             <div>
                                 <span class="text-muted me-2">Showing first 10 sequences</span>
                                 <a href="{{ url_for('download_sample', project_id=project.id, sample_id=sample.id) }}" class="btn btn-sm ocean-button-sm">
@@ -238,11 +228,11 @@
                     </div>
                     
                     <div class="tab-pane fade" id="metadata" role="tabpanel" aria-labelledby="metadata-tab">
-                        <h5 class="mb-3 text-primary"><i class="fas fa-table me-2 pulse-icon"></i>Sample Metadata</h5>
+                        <h5 class="mb-3 section-title"><i class="fas fa-table me-2 text-primary pulse-icon"></i>Sample Metadata</h5>
                         {% if metadata %}
                         <div class="table-responsive">
                             <table class="table table-striped">
-                                <thead class="bg-primary text-white">
+                                <thead>
                                     <tr>
                                         <th><i class="fas fa-key me-1"></i>Key</th>
                                         <th><i class="fas fa-info-circle me-1"></i>Value</th>
@@ -271,7 +261,7 @@
                     
                     <div class="tab-pane fade" id="comments" role="tabpanel" aria-labelledby="comments-tab">
                         <div class="comments-section">
-                            <h5 class="mb-3 text-primary"><i class="fas fa-comments me-2 pulse-icon"></i>Sample Comments</h5>
+                            <h5 class="mb-3 section-title"><i class="fas fa-comments me-2 text-primary pulse-icon"></i>Sample Comments</h5>
                             {% if comments %}
                             <div class="comments-list mb-4 ocean-card p-3">
                                 {% for comment in comments %}
@@ -292,8 +282,8 @@
                                                         <i class="fas fa-ellipsis-v pulse-icon"></i>
                                                     </button>
                                                     <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editCommentModal" data-comment-id="{{ comment.id }}" data-comment-text="{{ comment.content }}"><i class="fas fa-edit me-1 text-primary"></i>Edit</a></li>
-                                                        <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteCommentModal" data-comment-id="{{ comment.id }}"><i class="fas fa-trash-alt me-1"></i>Delete</a></li>
+                                                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editCommentModal" data-comment-id="{{ comment.id }}" data-comment-text="{{ comment.content }}"><span data-edit-url="{{ url_for('edit_sample_comment', project_id=project.id, sample_id=sample.id, comment_id=comment.id) }}"></span><i class="fas fa-edit me-1 text-primary"></i>Edit</a></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteCommentModal" data-comment-id="{{ comment.id }}"><span data-delete-url="{{ url_for('delete_sample_comment', project_id=project.id, sample_id=sample.id, comment_id=comment.id) }}"></span><i class="fas fa-trash-alt me-1"></i>Delete</a></li>
                                                     </ul>
                                                 </div>
                                                 {% endif %}
@@ -444,7 +434,8 @@
                 const deleteForm = document.getElementById('deleteAnalysisForm');
                 
                 analysisNameElement.textContent = analysisName;
-                deleteForm.action = "{{ url_for('delete_analysis', project_id=project.id, sample_id=sample.id, analysis_id='__id__') }}".replace('__id__', analysisId);
+                const urlCarrier = button.querySelector('[data-delete-url]');
+                deleteForm.action = urlCarrier ? urlCarrier.getAttribute('data-delete-url') : "";
             });
         }
         
@@ -460,7 +451,8 @@
                 const editForm = document.getElementById('editCommentForm');
                 
                 commentTextarea.value = commentText;
-                editForm.action = "{{ url_for('edit_sample_comment', project_id=project.id, sample_id=sample.id, comment_id='__id__') }}".replace('__id__', commentId);
+                const urlCarrier = button.querySelector('[data-edit-url]');
+                editForm.action = urlCarrier ? urlCarrier.getAttribute('data-edit-url') : "";
             });
         }
         
@@ -472,7 +464,8 @@
                 const commentId = button.getAttribute('data-comment-id');
                 
                 const deleteForm = document.getElementById('deleteCommentForm');
-                deleteForm.action = "{{ url_for('delete_sample_comment', project_id=project.id, sample_id=sample.id, comment_id='__id__') }}".replace('__id__', commentId);
+                const urlCarrier = button.querySelector('[data-delete-url]');
+                deleteForm.action = urlCarrier ? urlCarrier.getAttribute('data-delete-url') : "";
             });
         }
     });

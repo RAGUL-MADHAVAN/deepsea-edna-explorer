@@ -115,7 +115,7 @@
                                         <span class="badge badge-scientific badge-known">Known</span>
                                     {% elif row.status and ('High' in row.status) %}
                                         <span class="badge badge-scientific badge-high-novelty">High Novelty</span>
-                                    {% elif row.status and ('Potential' in row.status) %}
+                                    {% elif row.status and (('Potential' in row.status) or ('Novel Candidate' in row.status) or ('Novel' in row.status)) %}
                                         <span class="badge badge-scientific badge-novel">Potential Novel</span>
                                     {% else %}
                                         <span class="badge badge-scientific badge-unknown">Unknown</span>

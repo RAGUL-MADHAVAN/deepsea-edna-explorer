@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Collaborators - {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('project_detail', project_id=project.id) }}" class="text-primary"><i class="fas fa-folder-open me-1"></i>{{ project.title }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Manage Collaborators</li>
+      </ol>
+    </nav>
+    <h1 class="display-6 fw-bold mb-1"><i class="fas fa-users me-2 text-primary"></i>Manage Collaborators</h1>
+    <p class="text-muted mb-0">Invite and remove collaborators for this project.</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card ocean-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-user-plus me-2 text-primary"></i>Add Collaborator</h5>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('manage_collaborators', project_id=project.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label for="collaborator_email" class="form-label">User Email</label>
+            <input type="email" class="form-control" id="collaborator_email" name="collaborator_email" placeholder="name@example.com" required>
+            <div class="form-text">The user must already have an account.</div>
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i>Invite</button>
+          <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-outline-secondary ms-2"><i class="fas fa-arrow-left me-1"></i>Back</a>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card ocean-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-users-cog me-2 text-primary"></i>Current Collaborators</h5>
+      </div>
+      <div class="card-body">
+        {% if project.collaborators and project.collaborators|length > 0 %}
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <div class="small text-muted">Owner</div>
+              <div class="fw-semibold">{{ project.owner.name }} <span class="badge bg-primary ms-2">Owner</span></div>
+            </div>
+          </li>
+          {% for user in project.collaborators %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold">{{ user.name }}</div>
+              <div class="small text-muted">{{ user.email }}</div>
+            </div>
+            <a class="btn btn-outline-danger btn-sm" href="{{ url_for('remove_collaborator', project_id=project.id, user_id=user.id) }}">
+              <i class="fas fa-user-times me-1"></i>Remove
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted mb-0">No collaborators yet. Invite teammates using their email.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

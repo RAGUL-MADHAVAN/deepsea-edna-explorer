@@ -1,0 +1,8 @@
+level,shannon_index,simpson_index,richness,evenness
+kingdom,0.0,0.0,0,0.0
+phylum,0.0,0.0,0,0.0
+class,0.0,0.0,0,0.0
+order,0.0,0.0,0,0.0
+family,0.0,0.0,0,0.0
+genus,-1.000088900581841e-12,0.0,1,0.0
+species,1.3862943611158907,0.75,4,0.9999999999971146

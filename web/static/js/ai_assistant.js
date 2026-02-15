@@ -1,16 +1,18 @@
 // Ocean-themed AI Assistant JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
-    const chatContainer = document.getElementById('chat-container');
-    const userInput = document.getElementById('user-input');
+    // Support legacy and new IDs
+    const chatContainer = document.getElementById('chat-container') || document.getElementById('chatContainer');
+    const userInput = document.getElementById('user-input') || document.getElementById('userMessage');
     const sendButton = document.getElementById('send-button');
-    const contextProjectSelect = document.getElementById('context-project');
-    const contextSampleSelect = document.getElementById('context-sample');
-    const contextAnalysisSelect = document.getElementById('context-analysis');
-    const expertiseLevelSelect = document.getElementById('expertise-level');
-    const responseLengthSelect = document.getElementById('response-length');
-    const citationsToggle = document.getElementById('citations-toggle');
-    const dataAccessToggle = document.getElementById('data-access-toggle');
+    const chatForm = document.getElementById('chatForm');
+    const contextProjectSelect = document.getElementById('context-project') || document.getElementById('contextProject');
+    const contextSampleSelect = document.getElementById('context-sample') || document.getElementById('contextSample');
+    const contextAnalysisSelect = document.getElementById('context-analysis') || document.getElementById('contextAnalysis');
+    const expertiseLevelSelect = document.getElementById('aiExpertiseLevel') || document.getElementById('expertise-level');
+    const responseLengthSelect = document.getElementById('aiResponseLength') || document.getElementById('response-length');
+    const citationsToggle = document.getElementById('aiCitationToggle') || document.getElementById('citations-toggle');
+    const dataAccessToggle = document.getElementById('aiDataAccessToggle') || document.getElementById('data-access-toggle');
     
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -21,20 +23,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add welcome message
     addAssistantMessage("Welcome to OceanGenome AI Assistant! I can help with species identification, literature searches, data analysis, and method suggestions. How can I assist your research today?");
     
-    // Send message when button is clicked
-    if (sendButton) {
-        sendButton.addEventListener('click', sendMessage);
-    }
-    
-    // Send message when Enter key is pressed
-    if (userInput) {
-        userInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-    }
+    // Submit handling
+    if (sendButton) sendButton.addEventListener('click', function(e){ e.preventDefault(); sendMessage(); });
+    if (chatForm) chatForm.addEventListener('submit', function(e){ e.preventDefault(); sendMessage(); });
+    if (userInput) userInput.addEventListener('keypress', function(e){ if(e.key==='Enter'){ e.preventDefault(); sendMessage(); }});
     
     // Function to send message
     function sendMessage() {
@@ -62,33 +54,34 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         // Send to API
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfMeta ? (typeof csrfMeta.content === 'function' ? csrfMeta.content() : csrfMeta.getAttribute('content')) : '';
         fetch('/api/ai-assistant/query', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken || ''
             },
             body: JSON.stringify({
                 query: message,
                 context: context
             })
         })
-        .then(response => response.json())
-        .then(data => {
+        .then(async (response) => {
+            const data = await response.json().catch(() => ({ success: false, error: 'Invalid AI response' }));
             // Remove typing indicator
             removeTypingIndicator();
-            
-            if (data.success) {
-                // Add assistant response
-                addAssistantMessage(data.response);
+            if (data && data.success) {
+                addAssistantMessage(data.response || '');
             } else {
-                // Show error
-                addAssistantMessage("I'm sorry, I encountered an error processing your request. Please try again.");
+                const msg = (data && data.error) ? data.error : 'AI not configured. Set API key and retry.';
+                addAssistantMessage(`<div class="alert alert-warning mb-0">${escapeHtml(msg)}</div>`);
             }
         })
         .catch(error => {
             console.error('Error:', error);
             removeTypingIndicator();
-            addAssistantMessage("I'm sorry, I encountered an error processing your request. Please try again.");
+            addAssistantMessage(`<div class="alert alert-danger mb-0">Request failed: ${escapeHtml(error.message || String(error))}</div>`);
         });
     }
     

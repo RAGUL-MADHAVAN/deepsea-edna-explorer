@@ -1,0 +1,7 @@
+query_id,scientific_name,taxonomic_rank,hit_def,e_value,identity_percent,query_coverage
+seq_01,Limacia clavigera,species,"Limacia clavigera genome assembly, chromosome: 6",9.19919e-15,69.61722488038278,0.801180687328695
+seq_01,Diestramima guangxiensis,species,"Diestramima guangxiensis isolate 0412 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial",1.27871e-06,95.65217391304348,0.08816820961033485
+seq_01,Diestramima brevis,species,"Diestramima brevis isolate 3701 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial >gi|2194789353|gb|OM716725.1| Diestramima brevis isolate 3702 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial >gi|2194789355|gb|OM716726.1| Diestramima brevis isolate 0048 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial",1.27871e-06,95.65217391304348,0.08816820961033485
+seq_01,Diestramima guangxiensis,species,"Diestramima guangxiensis isolate 1101 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial",1.27871e-06,95.65217391304348,0.08816820961033485
+seq_01,Diestramima guangxiensis,species,"Diestramima guangxiensis isolate 0407 cytochrome c oxidase subunit I (COX1) gene, partial cds; mitochondrial",1.27871e-06,95.65217391304348,0.08816820961033485
+seq_02,Unclassified,unknown,Remote BLAST failed or unavailable,,0.0,0.0

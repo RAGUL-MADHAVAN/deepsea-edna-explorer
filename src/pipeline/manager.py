@@ -34,7 +34,7 @@ class PipelineManager:
         self.marker_validator = MarkerValidator(self.output_dir / "markers")
         self.assembly = GenomeAssembler(self.output_dir / "assembly")
         self.clustering = ClusterAnalysis(self.output_dir / "clustering", use_gpu=use_gpu)
-        self.taxonomy = TaxonomyClassifier(self.output_dir / "taxonomy", db_path=taxonomy_db_path)
+        self.taxonomy = TaxonomyClassifier(self.output_dir / "taxonomy", db_path=taxonomy_db_path, allow_remote=True)
         self.phylogeny = PhylogeneticPlacer(self.output_dir / "phylogeny")
         self.functional = FunctionalAnnotator(self.output_dir / "functional")
         self.abundance = AbundanceEstimator(self.output_dir / "abundance")
@@ -252,6 +252,8 @@ class PipelineManager:
             ends_family = name.endswith('idae') or ' family' in name.lower()
             if is_binomial and identity >= 97.0 and coverage >= 90.0:
                 return "Known Species"
+            if is_binomial and identity >= 95.0 and coverage >= 85.0:
+                return "Likely Known Species"
             if identity >= 95.0:
                 return "Known Genus"
             if ends_family or rank == 'family':
@@ -260,11 +262,20 @@ class PipelineManager:
             return "Potential Novel Taxon"
         final_results['classification'] = final_results.apply(determine_classification, axis=1)
         def determine_status(row):
+            name = str(row.get('scientific_name', '') or '').strip()
+            identity = float(row.get('identity_percent', 0.0) or 0.0)
+            coverage = float(row.get('query_coverage', 0.0) or 0.0)
+            hit_def = str(row.get('hit_def', '') or '').lower()
             c = row['classification']
             if c == "Known Species":
                 return "Known"
+            if c == "Likely Known Species":
+                return "Likely Known"
             if c in ["Known Genus", "Known Family"]:
                 return "Partially Known"
+            # Unknown if no significant BLAST support
+            if (identity == 0.0) or (coverage == 0.0) or (name.lower() in ["unclassified", "unknown"]) or ("no match found" in hit_def) or name.startswith("PREDICTED:"):
+                return "Unknown"
             return "Novel Candidate"
         final_results['status'] = final_results.apply(determine_status, axis=1)
         def adjust_novelty(row):
@@ -272,11 +283,13 @@ class PipelineManager:
             n = float(row.get('novelty_score', 0.0) or 0.0)
             if c == "Known Species":
                 return max(0.0, min(n, 0.10))
+            if c == "Likely Known Species":
+                return max(0.10, min(n, 0.30))
             if c == "Known Genus":
                 return 0.30 if n == 0.0 else max(0.20, min(n, 0.40))
             if c == "Known Family":
                 return 0.55 if n == 0.0 else max(0.40, min(n, 0.70))
-            return max(0.80, min(n, 1.0))
+            return max(0.60, min(n, 1.0))
         if 'novelty_score' in final_results.columns:
             final_results['novelty_score'] = final_results.apply(adjust_novelty, axis=1)
         

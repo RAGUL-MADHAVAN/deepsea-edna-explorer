@@ -14,6 +14,9 @@ import subprocess
 import sys
 import threading
 from datetime import datetime
+import csv
+import urllib.request
+import urllib.error
 from flask import render_template, request, redirect, url_for, flash, session, jsonify, send_file, send_from_directory
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -21,7 +24,7 @@ from werkzeug.utils import secure_filename
 from Bio import SeqIO
 
 # Mongo client
-from app import mongo
+from app import mongo, csrf
 
 # Import models
 from models import db, User, Project, Sample, Analysis, Notification, Comment
@@ -346,6 +349,7 @@ def register_routes(app):
                               now=now)
     
     @app.route('/api/ai-assistant/query', methods=['POST'])
+    @csrf.exempt
     @login_required
     def ai_assistant_query():
         data = request.get_json()
@@ -356,28 +360,64 @@ def register_routes(app):
         query = data['query']
         context = data.get('context', {})
         
-        # In a real implementation, this would call an AI service
-        # For demonstration, we'll return mock responses based on keywords
+        # Real AI call (OpenAI-compatible Chat Completions). Requires OPENAI_API_KEY.
+        # Prefer instance config, then environment variables
+        api_key = app.config.get('OPENAI_API_KEY') or os.environ.get('OPENAI_API_KEY')
+        base_url = app.config.get('OPENAI_BASE_URL') or os.environ.get('OPENAI_BASE_URL', 'https://api.openai.com/v1')
+        model = app.config.get('OPENAI_MODEL') or os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
+        if not api_key:
+            return jsonify({'success': False, 'error': 'AI not configured: set OPENAI_API_KEY in environment or instance/config.py'}), 400
         
-        response = ''
-        if 'species' in query.lower():
-            response = "Based on the DNA sequence analysis, this appears to be a previously unidentified species of deep-sea coral. The genetic markers suggest it belongs to the Octocorallia subclass, but with several unique mutations in the mitochondrial DNA."
-        elif 'method' in query.lower():
-            response = "For this type of marine sample, I recommend using the Oxford Nanopore sequencing method followed by our custom OceanGenome pipeline. This approach has shown 98% accuracy for similar deep-sea samples in recent studies."
-        elif 'literature' in query.lower() or 'research' in query.lower():
-            response = "I found 3 recent papers related to your query: 1) 'Novel genetic markers in deep-sea corals' (Zhang et al., 2023), 2) 'Biodiversity patterns in abyssal ecosystems' (Johnson et al., 2022), and 3) 'Comparative genomics of hydrothermal vent organisms' (Patel et al., 2023)."
-        elif 'analysis' in query.lower() or 'data' in query.lower():
-            response = "Your current dataset shows significant clustering around three genetic markers. I recommend running a principal component analysis to better visualize the genetic diversity, followed by a BLAST comparison against the MarineGenome database."
-        else:
-            response = "I'm your OceanGenome AI Assistant. I can help with species identification, literature searches, data analysis, and method suggestions. Please provide more details about your research question."
+        # Build a concise, domain-aware system prompt
+        sys_prompt = (
+            "You are an expert marine bioinformatics assistant for a deep-sea eDNA platform. "
+            "Analyze user questions using scientific rigor. Be concise, factual, and cite methods or metrics when relevant. "
+            "If asked about project/sample/analysis context, use the provided context to tailor the answer. "
+            "Avoid inventing data not present in the question or context."
+        )
         
-        # In a real implementation, we would log this interaction
+        # Compose messages
+        ctx_lines = []
+        if context:
+            for k, v in context.items():
+                if v:
+                    ctx_lines.append(f"{k}: {v}")
+        ctx_text = "\n".join(ctx_lines)
+        user_content = query if not ctx_text else f"Context:\n{ctx_text}\n\nQuestion:\n{query}"
+        payload = {
+            'model': model,
+            'messages': [
+                {'role': 'system', 'content': sys_prompt},
+                {'role': 'user', 'content': user_content}
+            ],
+            'temperature': 0.2,
+            'max_tokens': 500
+        }
         
-        return jsonify({
-            'success': True,
-            'response': response,
-            'timestamp': datetime.utcnow().isoformat()
-        })
+        try:
+            req = urllib.request.Request(
+                url=f"{base_url.rstrip('/')}/chat/completions",
+                data=json.dumps(payload).encode('utf-8'),
+                headers={
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {api_key}'
+                },
+                method='POST'
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                resp_data = json.loads(resp.read().decode('utf-8'))
+                content = resp_data.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+                if not content:
+                    return jsonify({'success': False, 'error': 'Empty response from AI provider.'}), 502
+                return jsonify({'success': True, 'response': content, 'timestamp': datetime.utcnow().isoformat()})
+        except urllib.error.HTTPError as e:
+            try:
+                err_body = e.read().decode('utf-8')
+            except Exception:
+                err_body = str(e)
+            return jsonify({'success': False, 'error': f'Provider error {e.code}: {err_body}'}), 502
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'AI request failed: {e}'}), 502
     
     
     # 2. Researcher Profile Section
@@ -611,6 +651,11 @@ def register_routes(app):
         # Get recent projects
         recent_projects = Project.query.filter_by(owner_id=current_user.id).order_by(Project.updated_at.desc()).limit(5).all()
         
+        # Get user's samples (across projects)
+        user_samples = Sample.query.join(Project).filter(
+            Project.owner_id == current_user.id
+        ).order_by(Sample.created_at.desc()).limit(20).all()
+        
         # Get recent analyses
         recent_analyses = Analysis.query.join(Sample).join(Project).filter(
             Project.owner_id == current_user.id
@@ -621,19 +666,57 @@ def register_routes(app):
         
         return render_template('dashboard.html', 
                               recent_projects=recent_projects, 
+                              user_samples=user_samples,
                               recent_analyses=recent_analyses,
                               notifications=notifications)
+    
+    @app.route('/analyses')
+    @login_required
+    def analyses():
+        analyses = Analysis.query.join(Sample).join(Project).filter(
+            Project.owner_id == current_user.id
+        ).order_by(Analysis.created_at.desc()).all()
+        return render_template('analyses.html', analyses=analyses)
     
     # 4. Data Upload & Analysis
     @app.route('/projects')
     @login_required
     def projects():
-        user_projects = Project.query.filter_by(owner_id=current_user.id).all()
-        collaborative_projects = current_user.collaborative_projects
-        
-        return render_template('projects.html', 
-                              user_projects=user_projects, 
-                              collaborative_projects=collaborative_projects)
+        from sqlalchemy import func
+        page = int(request.args.get('page', 1) or 1)
+        per_page = 9
+        search = (request.args.get('search') or '').strip()
+        filter_opt = (request.args.get('filter') or 'my').lower()
+        sort_opt = (request.args.get('sort') or 'updated_desc').lower()
+        base = Project.query
+        if filter_opt == 'my':
+            base = base.filter(Project.owner_id == current_user.id)
+        elif filter_opt == 'shared':
+            base = base.filter(Project.collaborators.any(User.id == current_user.id))
+        elif filter_opt == 'public':
+            base = base.filter(Project.is_public.is_(True))
+        else:
+            base = base.filter(Project.owner_id == current_user.id)
+        if search:
+            like = f"%{search}%"
+            base = base.filter(
+                (Project.title.ilike(like)) |
+                (Project.description.ilike(like)) |
+                (Project.project_metadata.ilike(like))
+            )
+        if sort_opt == 'created_desc':
+            base = base.order_by(Project.created_at.desc())
+        elif sort_opt == 'created_asc':
+            base = base.order_by(Project.created_at.asc())
+        elif sort_opt == 'title_asc':
+            base = base.order_by(Project.title.asc())
+        elif sort_opt == 'samples_desc':
+            base = base.outerjoin(Sample).group_by(Project.id).order_by(func.count(Sample.id).desc(), Project.updated_at.desc())
+        else:
+            base = base.order_by(Project.updated_at.desc())
+        pagination = base.paginate(page=page, per_page=per_page, error_out=False)
+        projects = pagination.items
+        return render_template('projects.html', projects=projects, pagination=pagination)
     
     @app.route('/projects/new', methods=['GET', 'POST'])
     @login_required
@@ -872,8 +955,40 @@ def register_routes(app):
         if project.owner_id != current_user.id and current_user not in project.collaborators:
             flash('You do not have access to this sample', 'danger')
             return redirect(url_for('projects'))
-        # Redirect to analyze page (acts as a sample detail/entry point)
-        return redirect(url_for('analyze_sample', sample_id=sample_id))
+        analyses = Analysis.query.filter_by(sample_id=sample_id).order_by(Analysis.created_at.desc()).all()
+        comments = Comment.query.filter_by(project_id=project.id).order_by(Comment.created_at.desc()).all()
+        from forms import CommentForm
+        comment_form = CommentForm()
+        preview = []
+        metadata = sample.get_metadata()
+        try:
+            upload_root = app.config.get('UPLOAD_FOLDER')
+            abs_path = os.path.join(upload_root, sample.file_path) if upload_root and sample.file_path else None
+            ext = sample.get_file_extension()
+            sample.file_format = ext
+            if abs_path and os.path.exists(abs_path):
+                if ext in ['fasta', 'fa']:
+                    count = 0
+                    for record in SeqIO.parse(abs_path, 'fasta'):
+                        header = record.id or f'seq_{count}'
+                        seq = str(record.seq)
+                        preview.append((header, seq))
+                        count += 1
+                        if count >= 10:
+                            break
+                elif ext in ['fastq', 'fq']:
+                    count = 0
+                    for record in SeqIO.parse(abs_path, 'fastq'):
+                        header = record.id or f'read_{count}'
+                        seq = str(record.seq)
+                        qual = record.letter_annotations.get('phred_quality', [])
+                        preview.append({'header': header, 'sequence': seq, 'quality': ' '.join(map(str, qual[:60]))})
+                        count += 1
+                        if count >= 10:
+                            break
+        except Exception:
+            preview = []
+        return render_template('sample_detail.html', sample=sample, project=project, analyses=analyses, comments=comments, sequence_preview=preview, metadata=metadata, comment_form=comment_form)
 
     # Backward-compatible endpoint used in templates/menus
     @app.route('/samples/<int:sample_id>/run')
@@ -885,20 +1000,6 @@ def register_routes(app):
             flash('You do not have access to this sample', 'danger')
             return redirect(url_for('projects'))
         return redirect(url_for('analyze_sample', sample_id=sample_id))
-
-    # Placeholder edit route referenced by templates
-    @app.route('/samples/<int:sample_id>/edit', methods=['GET', 'POST'])
-    @login_required
-    def edit_sample(sample_id):
-        sample = Sample.query.get_or_404(sample_id)
-        project = Project.query.get(sample.project_id)
-        if project.owner_id != current_user.id and current_user not in project.collaborators:
-            flash('You do not have access to edit this sample', 'danger')
-            return redirect(url_for('projects'))
-        # For now, redirect to analyze page as an entry point
-        flash('Sample edit page is not implemented yet. Redirecting to analysis.', 'info')
-        return redirect(url_for('analyze_sample', sample_id=sample_id))
-
     # Download the uploaded sample file
     @app.route('/samples/<int:sample_id>/download')
     @login_required
@@ -921,6 +1022,65 @@ def register_routes(app):
         directory, filename = os.path.split(abs_path)
         return send_from_directory(directory, filename, as_attachment=True)
 
+    # Comments on Sample (project-level discussion)
+    @app.route('/projects/<int:project_id>/samples/<int:sample_id>/comments', methods=['POST'])
+    @login_required
+    def add_sample_comment(project_id, sample_id):
+        sample = Sample.query.get_or_404(sample_id)
+        project = Project.query.get_or_404(project_id)
+        if sample.project_id != project.id:
+            flash('Invalid sample for this project', 'danger')
+            return redirect(url_for('projects'))
+        if project.owner_id != current_user.id and current_user not in project.collaborators:
+            flash('You do not have access to comment on this sample', 'danger')
+            return redirect(url_for('projects'))
+        text = request.form.get('content') or request.form.get('comment_text') or ''
+        if not text.strip():
+            flash('Comment cannot be empty', 'warning')
+            return redirect(url_for('sample_detail', sample_id=sample_id))
+        new_comment = Comment(user_id=current_user.id, project_id=project.id, text=text.strip())
+        db.session.add(new_comment)
+        db.session.commit()
+        flash('Comment added', 'success')
+        return redirect(url_for('sample_detail', sample_id=sample_id))
+
+    @app.route('/projects/<int:project_id>/samples/<int:sample_id>/comments/<int:comment_id>/edit', methods=['POST'])
+    @login_required
+    def edit_sample_comment(project_id, sample_id, comment_id):
+        sample = Sample.query.get_or_404(sample_id)
+        project = Project.query.get_or_404(project_id)
+        if sample.project_id != project.id:
+            flash('Invalid sample for this project', 'danger')
+            return redirect(url_for('projects'))
+        comment = Comment.query.get_or_404(comment_id)
+        if comment.user_id != current_user.id:
+            flash('You can only edit your own comments', 'danger')
+            return redirect(url_for('sample_detail', sample_id=sample_id))
+        text = request.form.get('content') or request.form.get('comment_text') or ''
+        if not text.strip():
+            flash('Comment cannot be empty', 'warning')
+            return redirect(url_for('sample_detail', sample_id=sample_id))
+        comment.text = text.strip()
+        db.session.commit()
+        flash('Comment updated', 'success')
+        return redirect(url_for('sample_detail', sample_id=sample_id))
+
+    @app.route('/projects/<int:project_id>/samples/<int:sample_id>/comments/<int:comment_id>/delete', methods=['POST'])
+    @login_required
+    def delete_sample_comment(project_id, sample_id, comment_id):
+        sample = Sample.query.get_or_404(sample_id)
+        project = Project.query.get_or_404(project_id)
+        if sample.project_id != project.id:
+            flash('Invalid sample for this project', 'danger')
+            return redirect(url_for('projects'))
+        comment = Comment.query.get_or_404(comment_id)
+        if comment.user_id != current_user.id and project.owner_id != current_user.id:
+            flash('You do not have permission to delete this comment', 'danger')
+            return redirect(url_for('sample_detail', sample_id=sample_id))
+        db.session.delete(comment)
+        db.session.commit()
+        flash('Comment deleted', 'success')
+        return redirect(url_for('sample_detail', sample_id=sample_id))
     # Delete a sample (POST only)
     @app.route('/samples/<int:sample_id>/delete', methods=['POST'])
     @login_required
@@ -1098,15 +1258,15 @@ def register_routes(app):
                     if 'cluster' in df.columns:
                         def _status_rank(s):
                             s = str(s or '')
-                            if 'High-Novelty' in s:
+                            if 'High-Novelty' in s or 'High Novelty' in s:
                                 return 4
-                            if 'Potential Novel' in s:
+                            if 'Potential Novel' in s or 'Novel Candidate' in s or 'Novel' in s:
                                 return 3
                             if 'Unknown' in s:
                                 return 2
                             if 'Variant' in s:
                                 return 1
-                            if 'Known' in s:
+                            if 'Known' in s or 'Partially Known' in s:
                                 return 0
                             return 2
 
@@ -1179,9 +1339,179 @@ def register_routes(app):
         if project.owner_id != current_user.id and current_user not in project.collaborators:
             flash('You do not have access to this report', 'danger')
             return redirect(url_for('projects'))
-        # Serve a simple HTML report placeholder
-        html = f"<html><body><h3>Analysis {analysis.id} Report (Demo)</h3><p>Type: {analysis.analysis_type}</p><p>Status: {analysis.status}</p></body></html>"
-        return html
+        report_format = request.args.get('format', 'html')
+        
+        # Assemble real-data report content from pipeline outputs (CSV) when available
+        report_data = {
+            'total_reads': None,
+            'amplicon_reads': None,
+            'shotgun_reads': None,
+            'taxonomy_rows': [],   # species/genus/family/confidence/abundance_pct
+            'cluster_rows': [],    # reuse cluster summary (id, taxonomy, novelty, status)
+            'tools_used': [],
+            'novelty': {
+                'avg_score': None,
+                'top_cluster_id': None,
+                'top_cluster_size': None,
+                'embedding_distance': None,  # not available unless pipeline provides
+            },
+            'charts': {
+                'species_abundance': {'labels': [], 'values': []},
+                'cluster_counts': {'labels': [], 'values': []},
+                'novelty_series': [],
+            },
+            'clustering': {
+                'total_clusters': None,
+                'noise_points': None,
+                'silhouette_score': None,
+                'hdbscan_params': None,
+            },
+            'qc': {
+                'reads_removed_pct': None,
+                'low_quality_pct': None,
+                'host_contam_pct': None,
+            },
+            'confidence': {
+                'bootstrap': None,
+                'cross_evidence': None,
+            }
+        }
+        
+        try:
+            if analysis.status == 'completed' and analysis.result_path:
+                csv_path = os.path.join(app.config['UPLOAD_FOLDER'], analysis.result_path, 'results', 'final_results.csv')
+                if not os.path.exists(csv_path):
+                    csv_path = os.path.join(app.config['UPLOAD_FOLDER'], analysis.result_path, 'final_results.csv')
+                if os.path.exists(csv_path):
+                    df = pd.read_csv(csv_path)
+                    # Total reads
+                    try:
+                        report_data['total_reads'] = int(len(df))
+                    except Exception:
+                        report_data['total_reads'] = None
+                    
+                    # Discover tools from pipeline log when available
+                    try:
+                        tools_detected = set()
+                        if analysis.pipeline_log:
+                            log_lower = analysis.pipeline_log.lower()
+                            candidates = [
+                                ('fastp', 'fastp'),
+                                ('dada2', 'DADA2'),
+                                ('blast', 'BLAST'),
+                                ('dnabert-2', 'DNABERT-2'),
+                                ('dnabert', 'DNABERT'),
+                                ('hdbscan', 'HDBSCAN'),
+                                ('umap', 'UMAP'),
+                                ('minimap2', 'Minimap2'),
+                            ]
+                            for key, label in candidates:
+                                if key in log_lower:
+                                    tools_detected.add(label)
+                        # Fallback: infer steps by available outputs
+                        if analysis.classification_path:
+                            tools_detected.add('Classification')
+                        if analysis.annotation_path:
+                            tools_detected.add('Annotation')
+                        if analysis.abundance_path:
+                            tools_detected.add('Abundance')
+                        if analysis.visualization_path:
+                            tools_detected.add('Visualization')
+                        report_data['tools_used'] = sorted(list(tools_detected))
+                    except Exception:
+                        pass
+                    
+                    # Amplicon/Shotgun inferred from sample metadata data_type
+                    try:
+                        dtype = (sample.data_type or '').lower()
+                        if dtype == 'amplicon':
+                            report_data['amplicon_reads'] = report_data['total_reads']
+                        elif dtype == 'shotgun':
+                            report_data['shotgun_reads'] = report_data['total_reads']
+                    except Exception:
+                        pass
+                    
+                    # Species abundance (by scientific_name)
+                    if 'scientific_name' in df.columns:
+                        species_counts = df['scientific_name'].fillna('Unclassified').value_counts()
+                        labels = species_counts.index.tolist()
+                        values = species_counts.values.tolist()
+                        report_data['charts']['species_abundance'] = {'labels': labels, 'values': values}
+                        # Build taxonomy table rows from species counts
+                        total = sum(values) if values else 0
+                        for name, count in species_counts.items():
+                            abundance_pct = (100.0 * count / total) if total else None
+                            row = {
+                                'species': name,
+                                'genus': None,
+                                'family': None,
+                                'confidence': None,
+                                'abundance_pct': abundance_pct
+                            }
+                            # If genus/family/confidence columns exist, fill them
+                            try:
+                                subset = df[df['scientific_name'] == name]
+                                if 'genus' in df.columns:
+                                    gvals = [str(x) for x in subset['genus'].dropna().unique().tolist() if str(x)]
+                                    row['genus'] = gvals[0] if gvals else None
+                                if 'family' in df.columns:
+                                    fvals = [str(x) for x in subset['family'].dropna().unique().tolist() if str(x)]
+                                    row['family'] = fvals[0] if fvals else None
+                                for cand in ['confidence','blast_confidence','identity','blast_identity']:
+                                    if cand in df.columns:
+                                        cvals = subset[cand].dropna().astype(float).tolist()
+                                        row['confidence'] = float(sum(cvals)/len(cvals)) if cvals else None
+                                        break
+                            except Exception:
+                                pass
+                            report_data['taxonomy_rows'].append(row)
+                    
+                    # Cluster-level summary
+                    if 'cluster' in df.columns:
+                        # counts for bar chart
+                        cluster_counts = df['cluster'].fillna('noise').value_counts()
+                        report_data['charts']['cluster_counts'] = {
+                            'labels': [str(x) for x in cluster_counts.index.tolist()],
+                            'values': cluster_counts.values.tolist()
+                        }
+                        # top cluster info
+                        try:
+                            top_cluster_id = cluster_counts.index.tolist()[0]
+                            top_size = int(cluster_counts.values.tolist()[0])
+                            report_data['novelty']['top_cluster_id'] = str(top_cluster_id)
+                            report_data['novelty']['top_cluster_size'] = top_size
+                        except Exception:
+                            pass
+                        # noise points
+                        try:
+                            report_data['clustering']['noise_points'] = int(cluster_counts.get('noise', 0))
+                        except Exception:
+                            pass
+                        # total clusters excluding noise
+                        try:
+                            unique_clusters = [c for c in cluster_counts.index.tolist() if str(c) != 'noise']
+                            report_data['clustering']['total_clusters'] = len(unique_clusters)
+                        except Exception:
+                            pass
+                    
+                    # Novelty series & average
+                    if 'novelty_score' in df.columns:
+                        try:
+                            series = df['novelty_score'].dropna().astype(float).tolist()
+                            report_data['charts']['novelty_series'] = series
+                            report_data['novelty']['avg_score'] = float(sum(series)/len(series)) if series else None
+                        except Exception:
+                            pass
+                # else: CSV not found -> keep N/A values
+        except Exception as e:
+            print(f"Error building report data: {e}")
+        
+        return render_template('report.html',
+                              analysis=analysis,
+                              sample=sample,
+                              project=project,
+                              format=report_format,
+                              report_data=report_data)
 
     @app.route('/analyses/<int:analysis_id>/share')
     @login_required
@@ -1315,28 +1645,7 @@ def register_routes(app):
             
         return redirect(url_for('analysis_results', analysis_id=analysis_id))
     
-    # 7. Report Generation
-    @app.route('/analyses/<int:analysis_id>/report')
-    @login_required
-    def generate_report(analysis_id):
-        analysis = Analysis.query.get_or_404(analysis_id)
-        sample = Sample.query.get(analysis.sample_id)
-        project = Project.query.get(sample.project_id)
-        
-        # Check if user has access to this project
-        if project.owner_id != current_user.id and current_user not in project.collaborators:
-            flash('You do not have access to generate reports for this analysis', 'danger')
-            return redirect(url_for('projects'))
-            
-        # Generate report (this would be customized based on your actual report generation logic)
-        report_format = request.args.get('format', 'html')
-        
-        # For demonstration, we'll just return a template
-        return render_template('report.html', 
-                              analysis=analysis, 
-                              sample=sample, 
-                              project=project,
-                              format=report_format)
+    # 7. Report Generation (endpoint unified with download_analysis_report)
     
     # 8. Admin Features
     @app.route('/admin')
@@ -1500,3 +1809,120 @@ def register_routes(app):
     @app.errorhandler(500)
     def server_error(e):
         return render_template('errors/500.html'), 500
+
+    # Download project export (generates and streams a real file)
+    @app.route('/projects/<int:project_id>/export/download')
+    @login_required
+    def download_project_export(project_id):
+        project = Project.query.get_or_404(project_id)
+        # Access control
+        if project.owner_id != current_user.id and current_user not in project.collaborators:
+            flash('You do not have access to export this project', 'danger')
+            return redirect(url_for('projects'))
+        
+        fmt = request.args.get('format', 'csv').lower()
+        scope = request.args.get('scope', 'project').lower()
+        include_visualizations = request.args.get('include_visualizations', 'false').lower() == 'true'
+        include_raw = request.args.get('include_raw', 'false').lower() == 'true'
+        
+        # Build export directory under uploads
+        export_dir = os.path.join(app.config['UPLOAD_FOLDER'], str(current_user.id), str(project.id), 'exports')
+        os.makedirs(export_dir, exist_ok=True)
+        date_str = datetime.utcnow().strftime('%Y-%m-%d')
+        filename = f'project_export_{date_str}.{fmt if fmt in ["csv","json"] else "csv"}'
+        abs_path = os.path.join(export_dir, filename)
+        
+        # Gather data
+        samples = Sample.query.filter_by(project_id=project_id).all()
+        analyses = Analysis.query.join(Sample).filter(Sample.project_id == project_id).all()
+        
+        # Serialize based on format
+        try:
+            if fmt == 'json':
+                payload = {
+                    'project': {
+                        'id': project.id,
+                        'title': project.title,
+                        'description': project.description,
+                        'created_at': project.created_at.isoformat() if project.created_at else None,
+                        'owner': {'id': project.owner.id, 'name': project.owner.name} if project.owner else None,
+                        'collaborators': [{'id': u.id, 'name': u.name, 'email': u.email} for u in project.collaborators]
+                    },
+                    'samples': [
+                        {
+                            'id': s.id,
+                            'name': s.name,
+                            'type': s.sample_type,
+                            'collection_date': s.collection_date,
+                            'file_type': s.file_type,
+                        } for s in samples
+                    ],
+                    'analyses': [
+                        {
+                            'id': a.id,
+                            'sample_id': a.sample_id,
+                            'type': a.analysis_type,
+                            'status': a.status,
+                            'created_at': a.created_at.isoformat() if a.created_at else None,
+                            'completed_at': a.completed_at.isoformat() if a.completed_at else None,
+                            'result_path': a.result_path,
+                        } for a in analyses
+                    ],
+                    'options': {
+                        'scope': scope,
+                        'include_visualizations': include_visualizations,
+                        'include_raw': include_raw
+                    }
+                }
+                with open(abs_path, 'w', encoding='utf-8') as f:
+                    json.dump(payload, f, ensure_ascii=False, indent=2)
+            else:
+                # CSV: unified table with a 'record_type' column
+                fieldnames = [
+                    'record_type','id','name','description','created_at',
+                    'owner_name','collaborator_count','sample_type','collection_date',
+                    'file_type','analysis_type','analysis_status','completed_at','result_path'
+                ]
+                with open(abs_path, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    # project row
+                    writer.writerow({
+                        'record_type':'project',
+                        'id': project.id,
+                        'name': project.title,
+                        'description': project.description,
+                        'created_at': project.created_at.strftime('%Y-%m-%d') if project.created_at else '',
+                        'owner_name': project.owner.name if project.owner else '',
+                        'collaborator_count': len(project.collaborators),
+                    })
+                    # samples
+                    if scope in ['samples','analyses','complete']:
+                        for s in samples:
+                            writer.writerow({
+                                'record_type':'sample',
+                                'id': s.id,
+                                'name': s.name,
+                                'sample_type': s.sample_type or '',
+                                'collection_date': s.collection_date or '',
+                                'file_type': s.file_type or '',
+                            })
+                    # analyses
+                    if scope in ['analyses','complete']:
+                        for a in analyses:
+                            writer.writerow({
+                                'record_type':'analysis',
+                                'id': a.id,
+                                'name': '',
+                                'analysis_type': a.analysis_type or '',
+                                'analysis_status': a.status or '',
+                                'created_at': a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '',
+                                'completed_at': a.completed_at.strftime('%Y-%m-%d %H:%M') if a.completed_at else '',
+                                'result_path': a.result_path or '',
+                            })
+        except Exception as e:
+            print(f"Export generation error: {e}")
+            flash('Failed to generate export file', 'danger')
+            return redirect(url_for('export_project', project_id=project_id))
+        
+        return send_from_directory(export_dir, os.path.basename(abs_path), as_attachment=True)

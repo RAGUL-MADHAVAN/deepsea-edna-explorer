@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}DeepSea eDNA Explorer - Analyses{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Analyses</li>
+                </ol>
+            </nav>
+            <h1 class="display-5 fw-bold text-primary"><i class="fas fa-chart-bar me-2"></i>All Analyses</h1>
+            <p class="lead">Browse your recent analysis runs across projects.</p>
+            <div class="ocean-divider mb-3"></div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card ocean-card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Analyses</h5>
+                <a href="{{ url_for('projects') }}" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-project-diagram me-1"></i>Projects
+                </a>
+            </div>
+            <div class="card-body">
+                {% if analyses %}
+                <div class="list-group">
+                    {% for analysis in analyses %}
+                    <a href="{{ url_for('analysis_results', analysis_id=analysis.id) }}" class="list-group-item list-group-item-action ocean-list-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1 text-success">{{ analysis.sample.name }}</h6>
+                            <small><i class="fas fa-calendar-alt me-1"></i>{{ analysis.created_at|datetimeformat('%Y-%m-%d') }}</small>
+                        </div>
+                        <p class="mb-1">
+                            <span class="badge bg-info text-white">{{ analysis.analysis_type }}</span>
+                            <span class="ms-2">
+                                {% if analysis.status == 'completed' %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Completed</span>
+                                {% elif analysis.status == 'processing' %}
+                                <span class="badge bg-warning text-dark"><i class="fas fa-spinner fa-spin me-1"></i>Processing</span>
+                                {% elif analysis.status == 'failed' %}
+                                <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Failed</span>
+                                {% else %}
+                                <span class="badge bg-secondary"><i class="fas fa-clock me-1"></i>Pending</span>
+                                {% endif %}
+                            </span>
+                        </p>
+                        <small>
+                            <i class="fas fa-project-diagram me-1 text-primary"></i>{{ analysis.sample.project.title }}
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-bar fa-3x text-success mb-3"></i>
+                    <p>No analyses found.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    </div>
+{% endblock %}

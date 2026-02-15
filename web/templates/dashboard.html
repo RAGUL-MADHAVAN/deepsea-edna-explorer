@@ -176,11 +176,11 @@
     </div>
     
     <!-- Recent Analyses -->
-    <div class="col-md-6">
+    <div class="col-md-6" id="analyses-section">
         <div class="card mb-4 ocean-card">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Recent Analyses</h5>
-                <a href="#" class="btn btn-sm btn-outline-light">
+                <a href="{{ url_for('analyses') }}" class="btn btn-sm btn-outline-light">
                     <i class="fas fa-list"></i> View All
                 </a>
             </div>
@@ -260,6 +260,61 @@
         <!-- Badges feature removed for scientific interface -->
     </div>
 </div>
+
+<!-- Samples Section -->
+<div class="row mb-4" id="samples-section">
+    <div class="col-12">
+        <div class="card ocean-card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-flask me-2"></i>My Samples</h5>
+                <a href="#samples-section" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-list"></i> View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if user_samples %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Sample</th>
+                                <th>Project</th>
+                                <th>Depth (m)</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sample in user_samples %}
+                            <tr>
+                                <td>{{ sample.name }}</td>
+                                <td>
+                                    <a href="{{ url_for('project_detail', project_id=sample.project_id) }}" class="text-decoration-none">
+                                        {{ sample.project.title }}
+                                    </a>
+                                </td>
+                                <td>{{ sample.depth or 'N/A' }}</td>
+                                <td>{{ sample.collection_date or 'N/A' }}</td>
+                                <td>
+                                    <a href="{{ url_for('analyze_sample', sample_id=sample.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-play me-1"></i>Analyze
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-flask fa-3x text-info mb-3 pulse-icon"></i>
+                    <p>No samples found. Upload samples to your projects to see them here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    </div>
 
 <!-- Featured Content -->
 <div class="row mb-4">

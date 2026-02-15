@@ -9,7 +9,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
@@ -24,8 +24,8 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--light-blue);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(180deg, #f3f9fd 0%, #eff8fb 40%, #f6fbff 100%);
             color: var(--dark);
             min-height: 100vh;
             display: flex;
@@ -234,21 +234,26 @@
         }
         
         .ocean-badge {
-            background-color: var(--light-blue);
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-            box-shadow: 0 4px 10px rgba(5, 191, 219, 0.2);
-            transition: all 0.3s ease;
+            gap: 0.35rem;
+            padding: 0.28rem 0.65rem;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.86rem;
+            border: 1px solid rgba(10, 77, 104, 0.24);
+            background: transparent;
+            color: var(--primary);
         }
-        
-        .ocean-badge:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 15px rgba(5, 191, 219, 0.3);
+        .ocean-badge.bg-secondary {
+            border-color: rgba(10, 77, 104, 0.18);
+            background: transparent;
+            color: var(--primary);
+        }
+        .ocean-badge.bg-success {
+            border-color: rgba(5, 191, 219, 0.35);
+            background: transparent;
+            color: var(--secondary);
         }
         
         .ocean-divider {
@@ -511,6 +516,7 @@
             border-bottom-left-radius: 0;
         }
     </style>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>

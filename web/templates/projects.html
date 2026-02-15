@@ -25,30 +25,31 @@
 </div>
 
 <!-- Filters and Search -->
-<div class="row mb-4">
+<div class="row mb-4 filters-offset">
     <div class="col-12">
-        <div class="ocean-card">
-            <div class="card-header bg-primary text-white">
+        <div class="ocean-card filters-bar">
+            <div class="card-header">
                 <i class="fas fa-filter me-2"></i>Filters and Search
             </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('projects') }}" class="row g-3">
-                    <div class="col-md-4">
-                        <div class="input-group">
-                            <span class="input-group-text bg-primary text-white"><i class="fas fa-search"></i></span>
-                            <input type="text" class="form-control" name="search" placeholder="Search projects..." value="{{ request.args.get('search', '') }}">
+                <form method="GET" action="{{ url_for('projects') }}" class="row g-3 align-items-center">
+                    <div class="col-12 col-md-6">
+                        <div class="input-group filters-group">
+                            <input id="projectSearch" type="text" class="form-control filters-input" name="search" placeholder="Search projects..." value="{{ request.args.get('search', '') }}">
+                            <button type="submit" class="btn filters-icon-btn" aria-label="Search">
+                                <i class="fas fa-search"></i>
+                            </button>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <select class="form-select" name="filter">
-                            <option value="all" {% if request.args.get('filter') == 'all' %}selected{% endif %}>All Projects</option>
-                            <option value="my" {% if request.args.get('filter') == 'my' %}selected{% endif %}>My Projects</option>
+                    <div class="col-12 col-md-3">
+                        <select class="form-select filters-select" name="filter">
+                            <option value="my" {% if request.args.get('filter', 'my') == 'my' %}selected{% endif %}>My Projects</option>
                             <option value="shared" {% if request.args.get('filter') == 'shared' %}selected{% endif %}>Shared With Me</option>
                             <option value="public" {% if request.args.get('filter') == 'public' %}selected{% endif %}>Public Projects</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <select class="form-select" name="sort">
+                    <div class="col-12 col-md-2">
+                        <select class="form-select filters-select" name="sort">
                             <option value="updated_desc" {% if request.args.get('sort') == 'updated_desc' %}selected{% endif %}>Last Updated</option>
                             <option value="created_desc" {% if request.args.get('sort') == 'created_desc' %}selected{% endif %}>Newest First</option>
                             <option value="created_asc" {% if request.args.get('sort') == 'created_asc' %}selected{% endif %}>Oldest First</option>
@@ -56,8 +57,8 @@
                             <option value="samples_desc" {% if request.args.get('sort') == 'samples_desc' %}selected{% endif %}>Most Samples</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn ocean-button-sm w-100">Apply</button>
+                    <div class="col-12 col-md-auto">
+                        <button type="submit" class="btn ocean-button-sm filters-apply">Apply</button>
                     </div>
                 </form>
             </div>
@@ -72,7 +73,7 @@
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
             {% for project in projects %}
             <div class="col">
-                <div class="ocean-card h-100 project-card">
+                <div class="ocean-card h-100 project-card" data-title="{{ project.title|lower }}" data-desc="{{ (project.description or '')|lower }}" data-tags="{{ (project.tags or '')|lower }}">
                     <div class="card-header bg-primary text-white">
                         <div class="d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">
@@ -102,13 +103,13 @@
                     <div class="card-body">
                         <p class="card-text text-truncate mb-3">{{ project.description }}</p>
                         
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <span class="ocean-badge bg-primary me-1">{{ project.samples|length }} samples</span>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="project-meta">
+                                <span class="ocean-badge badge-samples"><i class="fas fa-vial"></i>{{ project.samples|length }} samples</span>
                                 {% if project.is_public %}
-                                <span class="ocean-badge bg-success"><i class="fas fa-globe me-1"></i>Public</span>
+                                <span class="ocean-badge badge-public"><i class="fas fa-globe"></i>Public</span>
                                 {% else %}
-                                <span class="ocean-badge bg-secondary"><i class="fas fa-lock me-1"></i>Private</span>
+                                <span class="ocean-badge badge-private"><i class="fas fa-lock"></i>Private</span>
                                 {% endif %}
                             </div>
                             <small class="text-muted">Updated {{ project.updated_at.strftime('%Y-%m-%d') }}</small>
@@ -278,5 +279,19 @@
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     })
+    ;(function(){
+        var input = document.getElementById('projectSearch');
+        if(!input) return;
+        input.addEventListener('input', function(){
+            var q = (input.value || '').toLowerCase();
+            document.querySelectorAll('.project-card').forEach(function(card){
+                var t = card.getAttribute('data-title') || '';
+                var d = card.getAttribute('data-desc') || '';
+                var tg = card.getAttribute('data-tags') || '';
+                var show = !q || t.indexOf(q) >= 0 || d.indexOf(q) >= 0 || tg.indexOf(q) >= 0;
+                card.parentElement.style.display = show ? '' : 'none';
+            });
+        });
+    })();
 </script>
 {% endblock %}

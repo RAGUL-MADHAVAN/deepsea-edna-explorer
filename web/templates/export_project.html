@@ -153,15 +153,9 @@
                             <tr>
                                 <td>{{ sample.name }}</td>
                                 <td>{{ sample.sample_type }}</td>
-                                <td>{{ sample.collection_date.strftime('%Y-%m-%d') if sample.collection_date else 'N/A' }}</td>
+                                <td>{{ sample.collection_date or 'N/A' }}</td>
                                 <td>
-                                    {% set sample_analyses = [] %}
-                                    {% for analysis in analyses %}
-                                        {% if analysis.sample_id == sample.id %}
-                                            {% do sample_analyses.append(analysis) %}
-                                        {% endif %}
-                                    {% endfor %}
-                                    {{ sample_analyses|length }}
+                                    {{ (analyses|selectattr('sample_id', 'equalto', sample.id)|list)|length }}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -181,7 +175,7 @@
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Export Preview</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body" id="exportPreview">
                 <p class="text-center text-muted">
                     <i class="fas fa-file-export fa-3x mb-3"></i><br>
                     Select export options above and click "Generate Export" to preview your data.
@@ -201,49 +195,24 @@
             const includeVisualizations = document.getElementById('includeVisualizations').checked;
             const includeRawData = document.getElementById('includeRawData').checked;
             
-            // In a real application, this would trigger an AJAX request to generate the export
-            // For demonstration, we'll just show an alert
-            alert(`Export requested with format: ${format}, scope: ${scope}, ` + 
-                  `include visualizations: ${includeVisualizations}, include raw data: ${includeRawData}`);
-            
-            // Mock download link
-            const previewDiv = document.querySelector('.card:last-child .card-body');
+            const downloadUrl = `{{ url_for('download_project_export', project_id=project.id) }}?format=${encodeURIComponent(format)}&scope=${encodeURIComponent(scope)}&include_visualizations=${includeVisualizations}&include_raw=${includeRawData}`;
+            const fileExt = format === 'pdf' ? 'pdf' : (format === 'excel' ? 'xlsx' : (format === 'json' ? 'json' : 'csv'));
+            const fileName = `project_export_${new Date().toISOString().slice(0,10)}.${fileExt}`;
+            const previewDiv = document.getElementById('exportPreview');
             previewDiv.innerHTML = `
                 <div class="alert alert-success">
                     <i class="fas fa-check-circle me-2"></i>
                     Export generated successfully!
                 </div>
                 <div class="text-center">
-                    <p><i class="fas fa-file-${format === 'pdf' ? 'pdf' : 'alt'} fa-3x mb-3"></i></p>
-                    <p><strong>project_export_${new Date().toISOString().slice(0,10)}.${format}</strong></p>
-                    <p>${getFileSizeDescription(format, scope)}</p>
-                    <a href="#" class="btn btn-primary">
+                    <p><i class="fas fa-file-${fileExt === 'pdf' ? 'pdf' : 'alt'} fa-3x mb-3"></i></p>
+                    <p><strong>${fileName}</strong></p>
+                    <a href="${downloadUrl}" class="btn btn-primary">
                         <i class="fas fa-download me-2"></i>Download Export
                     </a>
                 </div>
             `;
         });
-        
-        // Helper function to generate mock file size description
-        function getFileSizeDescription(format, scope) {
-            let baseSize = 0;
-            
-            // Calculate mock file size based on format and scope
-            switch(scope) {
-                case 'project': baseSize = 10; break;
-                case 'samples': baseSize = 50; break;
-                case 'analyses': baseSize = 120; break;
-                case 'complete': baseSize = 250; break;
-            }
-            
-            // Adjust for format
-            switch(format) {
-                case 'csv': return `${baseSize} KB`;
-                case 'json': return `${baseSize * 1.2} KB`;
-                case 'excel': return `${baseSize * 1.5} KB`;
-                case 'pdf': return `${baseSize * 2} KB`;
-            }
-        }
     });
 </script>
 {% endblock %}

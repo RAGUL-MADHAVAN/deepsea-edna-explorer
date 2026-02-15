@@ -42,6 +42,10 @@ class User(UserMixin, db.Model):
     
     def __repr__(self):
         return f'<User {self.username}>'
+    @property
+    def full_name(self):
+        return self.name or self.username
+        
         
     def get_total_samples(self):
         """Return the total number of samples across all user's projects"""
@@ -156,6 +160,18 @@ class Sample(db.Model):
     @property
     def depth(self):
         return self.get_metadata().get('depth')
+    
+    @property
+    def location(self):
+        return self.get_metadata().get('location')
+    
+    @property
+    def sample_type(self):
+        return self.get_metadata().get('sample_type')
+    
+    @property
+    def data_type(self):
+        return self.get_metadata().get('data_type')
 
     @property
     def status(self):
@@ -170,6 +186,13 @@ class Sample(db.Model):
         except Exception:
             pass
         return 'uploaded'
+    
+    @property
+    def user(self):
+        try:
+            return self.project.owner
+        except Exception:
+            return None
 
     # UI helper methods
     def _absolute_file_path(self):

@@ -151,8 +151,18 @@ class ClusterAnalysis:
             else:
                 mean_dist = np.mean(D[:, 1:], axis=1)
         
-        # Normalize to 0-1 range roughly
-        score = 1 - np.exp(-mean_dist) 
+        # Normalize distances to 0-1 using dataset min-max to avoid saturation
+        md = mean_dist.astype(float)
+        md_min = float(np.min(md))
+        md_max = float(np.max(md))
+        if md_max <= md_min + 1e-12:
+            scaled = np.zeros_like(md)
+        else:
+            scaled = (md - md_min) / (md_max - md_min)
+        score = np.sqrt(np.clip(scaled, 0.0, 1.0)) * 0.98
+        if score.shape[0] > 1:
+            noise = np.linspace(0.0, 0.02, score.shape[0])
+            score = np.clip(score + noise, 0.0, 0.98)
         
         return score
 

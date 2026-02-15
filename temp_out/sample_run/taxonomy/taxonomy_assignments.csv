@@ -1,0 +1,6 @@
+query_id,scientific_name,taxonomic_rank,hit_def,e_value,identity_percent,query_coverage
+ASV_1;size=1,Unclassified,unknown,No match found,,0.0,0.0
+ASV_2;size=1,Stereodon callichrous,species,"Stereodon callichrous genome assembly, chromosome: 10",0.0244014,81.48148148148148,88.52459016393442
+ASV_3;size=1,Unclassified,unknown,No match found,,0.0,0.0
+ASV_4;size=1,Unclassified,unknown,No match found,,0.0,0.0
+ASV_5;size=1,Unclassified,unknown,No match found,,0.0,0.0

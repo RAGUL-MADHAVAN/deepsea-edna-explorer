@@ -3,85 +3,84 @@
 {% block title %}DeepSea eDNA Explorer - {{ project.title }}{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ project.title }}</li>
-            </ol>
-        </nav>
+<div class="page-header mb-4">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="text-primary"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('projects') }}" class="text-primary"><i class="fas fa-project-diagram me-1"></i>Projects</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ project.title }}</li>
+                </ol>
+            </nav>
+        </div>
     </div>
-</div>
-
-<!-- Project Header -->
-<div class="row mb-4">
-    <div class="col-md-8">
-        <div class="d-flex align-items-center mb-2">
-            <h1 class="display-5 fw-bold mb-0 text-primary"><i class="fas fa-project-diagram me-2"></i>{{ project.title }}</h1>
-            {% if project.is_public %}
-            <span class="ocean-badge bg-success ms-3"><i class="fas fa-globe me-1"></i>Public</span>
-            {% else %}
-            <span class="ocean-badge bg-secondary ms-3"><i class="fas fa-lock me-1"></i>Private</span>
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center mb-2">
+                <h1 class="display-5 fw-bold mb-0 text-primary"><i class="fas fa-project-diagram me-2"></i>{{ project.title }}</h1>
+                {% if project.is_public %}
+                <span class="visibility-badge public ms-3"><i class="fas fa-globe me-1"></i>Public</span>
+                {% else %}
+                <span class="visibility-badge private ms-3"><i class="fas fa-lock me-1"></i>Private</span>
+                {% endif %}
+            </div>
+            <p class="lead">{{ project.description }}</p>
+            <div class="ocean-divider mb-3"></div>
+            <div class="d-flex flex-wrap">
+                {% if project.location %}
+                <div class="me-4 mb-2">
+                    <i class="fas fa-map-marker-alt me-1 text-primary"></i> {{ project.location }}
+                </div>
+                {% endif %}
+                
+                {% if project.depth_min and project.depth_max %}
+                <div class="me-4 mb-2">
+                    <i class="fas fa-water me-1 text-primary"></i> {{ project.depth_min }} - {{ project.depth_max }} m
+                </div>
+                {% endif %}
+                
+                <div class="me-4 mb-2">
+                    <i class="fas fa-calendar-alt me-1 text-primary"></i> Created {{ project.created_at.strftime('%Y-%m-%d') }}
+                </div>
+                
+                <div class="mb-2">
+                    <i class="fas fa-clock me-1 text-primary"></i> Updated {{ project.updated_at.strftime('%Y-%m-%d') }}
+                </div>
+            </div>
+            
+            {% if project.tags %}
+            <div class="mt-2">
+                {% for tag in project.tags.split(',') %}
+                <span class="ocean-badge bg-light text-dark me-1 mb-1">{{ tag.strip() }}</span>
+                {% endfor %}
+            </div>
             {% endif %}
         </div>
-        <p class="lead">{{ project.description }}</p>
-        <div class="ocean-divider mb-3"></div>
-        <div class="d-flex flex-wrap">
-            {% if project.location %}
-            <div class="me-4 mb-2">
-                <i class="fas fa-map-marker-alt me-1 text-primary"></i> {{ project.location }}
+        <div class="col-md-4 text-md-end">
+            <div class="btn-group mb-2">
+                <a href="{{ url_for('edit_project', project_id=project.id) }}" class="btn ocean-button-sm">
+                    <i class="fas fa-edit me-1 pulse-icon"></i>Edit Project
+                </a>
+                <button type="button" class="btn ocean-button-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{{ url_for('manage_collaborators', project_id=project.id) }}"><i class="fas fa-users me-2"></i>Manage Collaborators</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('export_project', project_id=project.id) }}"><i class="fas fa-file-export me-2"></i>Export Project</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteProjectModal">
+                            <i class="fas fa-trash-alt me-2"></i>Delete Project
+                        </a>
+                    </li>
+                </ul>
             </div>
-            {% endif %}
             
-            {% if project.depth_min and project.depth_max %}
-            <div class="me-4 mb-2">
-                <i class="fas fa-water me-1 text-primary"></i> {{ project.depth_min }} - {{ project.depth_max }} m
-            </div>
-            {% endif %}
-            
-            <div class="me-4 mb-2">
-                <i class="fas fa-calendar-alt me-1 text-primary"></i> Created {{ project.created_at.strftime('%Y-%m-%d') }}
-            </div>
-            
-            <div class="mb-2">
-                <i class="fas fa-clock me-1 text-primary"></i> Updated {{ project.updated_at.strftime('%Y-%m-%d') }}
-            </div>
-        </div>
-        
-        {% if project.tags %}
-        <div class="mt-2">
-            {% for tag in project.tags.split(',') %}
-            <span class="ocean-badge bg-light text-dark me-1 mb-1">{{ tag.strip() }}</span>
-            {% endfor %}
-        </div>
-        {% endif %}
-    </div>
-    
-    <div class="col-md-4 text-md-end">
-        <div class="btn-group mb-2">
-            <a href="{{ url_for('edit_project', project_id=project.id) }}" class="btn ocean-button-sm">
-                <i class="fas fa-edit me-1 pulse-icon"></i>Edit Project
+            <a href="{{ url_for('upload_sample', project_id=project.id) }}" class="btn ocean-button ms-2 mb-2">
+                <i class="fas fa-upload me-1 pulse-icon"></i>Upload Sample
             </a>
-            <button type="button" class="btn ocean-button-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="visually-hidden">Toggle Dropdown</span>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="{{ url_for('manage_collaborators', project_id=project.id) }}"><i class="fas fa-users me-2"></i>Manage Collaborators</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('export_project', project_id=project.id) }}"><i class="fas fa-file-export me-2"></i>Export Project</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                    <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteProjectModal">
-                        <i class="fas fa-trash-alt me-2"></i>Delete Project
-                    </a>
-                </li>
-            </ul>
         </div>
-        
-        <a href="{{ url_for('upload_sample', project_id=project.id) }}" class="btn ocean-button ms-2 mb-2">
-            <i class="fas fa-upload me-1 pulse-icon"></i>Upload Sample
-        </a>
     </div>
 </div>
 
@@ -89,7 +88,7 @@
 <div class="row mb-4">
     <div class="col-12">
         <div class="ocean-card">
-            <ul class="nav nav-tabs" id="projectTabs" role="tablist">
+            <ul class="nav nav-tabs ocean-tabs" id="projectTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab" aria-controls="overview" aria-selected="true">
                         <i class="fas fa-home me-1 pulse-icon"></i>Overview
@@ -126,17 +125,17 @@
             <!-- Overview Tab -->
             <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
                 <div class="ocean-card">
-                    <div class="card-header bg-primary text-white">
+                    <div class="section-header">
                         <i class="fas fa-info-circle me-2"></i>Project Overview
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <!-- Project Stats -->
                             <div class="col-md-4 mb-4">
-                                <h5 class="mb-3 text-primary"><i class="fas fa-chart-line me-2"></i>Project Statistics</h5>
+                                <h5 class="section-title mb-3"><i class="fas fa-chart-line me-2"></i>Project Statistics</h5>
                                 <div class="row g-3">
                                     <div class="col-6">
-                                        <div class="ocean-card h-100">
+                                <div class="ocean-card h-100 stat-card">
                                             <div class="card-body text-center">
                                                 <i class="fas fa-flask fa-2x text-primary mb-2 pulse-icon"></i>
                                                 <h3 class="mb-0">{{ project.samples|length }}</h3>
@@ -145,7 +144,7 @@
                                         </div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="ocean-card h-100">
+                                <div class="ocean-card h-100 stat-card">
                                             <div class="card-body text-center">
                                                 <i class="fas fa-chart-bar fa-2x text-primary mb-2 pulse-icon"></i>
                                                 <h3 class="mb-0">{{ analyses|length }}</h3>
@@ -154,7 +153,7 @@
                                         </div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="ocean-card h-100">
+                                <div class="ocean-card h-100 stat-card">
                                             <div class="card-body text-center">
                                                 <i class="fas fa-users fa-2x text-primary mb-2 pulse-icon"></i>
                                                 <h3 class="mb-0">{{ project.collaborators|length }}</h3>
@@ -163,7 +162,7 @@
                                         </div>
                                     </div>
                                     <div class="col-6">
-                                        <div class="ocean-card h-100">
+                                <div class="ocean-card h-100 stat-card">
                                             <div class="card-body text-center">
                                                 <i class="fas fa-comments fa-2x text-primary mb-2 pulse-icon"></i>
                                                 <h3 class="mb-0">{{ comments|length }}</h3>
@@ -176,7 +175,7 @@
                             
                             <!-- Recent Activity -->
                             <div class="col-md-8 mb-4">
-                                <h5 class="mb-3 text-primary"><i class="fas fa-history me-2"></i>Recent Activity</h5>
+                                <h5 class="section-title mb-3"><i class="fas fa-history me-2"></i>Recent Activity</h5>
                                 {% if project_activity %}
                                 <div class="timeline ocean-card p-3">
                                     {% for activity in project_activity[:5] %}
@@ -212,10 +211,10 @@
                             
                             <!-- Taxonomic Summary -->
                             <div class="col-md-6 mb-4">
-                                <h5 class="mb-3 text-primary"><i class="fas fa-dna me-2"></i>Taxonomic Summary</h5>
+                                <h5 class="section-title mb-3"><i class="fas fa-dna me-2"></i>Taxonomic Summary</h5>
                                 {% if taxonomic_summary %}
                                 <div class="ocean-card">
-                                    <div class="card-header bg-primary text-white">
+                                    <div class="section-header">
                                         <i class="fas fa-chart-pie me-2"></i>Taxonomic Distribution
                                     </div>
                                     <div class="card-body">
@@ -224,7 +223,7 @@
                                 </div>
                                 {% else %}
                                 <div class="ocean-card">
-                                    <div class="card-header bg-primary text-white">
+                                    <div class="section-header">
                                         <i class="fas fa-chart-pie me-2"></i>Taxonomic Distribution
                                     </div>
                                     <div class="card-body text-center py-4">
@@ -238,10 +237,10 @@
                             
                             <!-- Depth Distribution -->
                             <div class="col-md-6 mb-4">
-                                <h5 class="mb-3 text-primary"><i class="fas fa-water me-2"></i>Depth Distribution</h5>
+                                <h5 class="section-title mb-3"><i class="fas fa-water me-2"></i>Depth Distribution</h5>
                                 {% if depth_distribution %}
                                 <div class="ocean-card">
-                                    <div class="card-header bg-primary text-white">
+                                    <div class="section-header">
                                         <i class="fas fa-chart-line me-2"></i>Depth Analysis
                                     </div>
                                     <div class="card-body">
@@ -250,7 +249,7 @@
                                 </div>
                                 {% else %}
                                 <div class="ocean-card">
-                                    <div class="card-header bg-primary text-white">
+                                    <div class="section-header">
                                         <i class="fas fa-chart-line me-2"></i>Depth Analysis
                                     </div>
                                     <div class="card-body text-center py-4">
@@ -321,7 +320,7 @@
                                                 <ul class="dropdown-menu" aria-labelledby="sampleActionDropdown{{ sample.id }}">
                                                     <li><a class="dropdown-item" href="{{ url_for('sample_detail', sample_id=sample.id) }}"><i class="fas fa-eye me-2"></i>View Details</a></li>
                                                     <li><a class="dropdown-item" href="{{ url_for('run_analysis', sample_id=sample.id) }}"><i class="fas fa-play me-2"></i>Run Analysis</a></li>
-                                                    <li><a class="dropdown-item" href="{{ url_for('edit_sample', sample_id=sample.id) }}"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                                                    <!-- Edit removed per requirement -->
                                                     <li><a class="dropdown-item" href="{{ url_for('download_sample', sample_id=sample.id) }}"><i class="fas fa-download me-2"></i>Download</a></li>
                                                     <li><hr class="dropdown-divider"></li>
                                                     <li>

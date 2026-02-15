@@ -38,6 +38,25 @@ Args:
     embeddings_2d = visualization_data['embeddings_2d']
     cluster_labels = visualization_data['cluster_labels']
     
+    # Anti-overlap jitter: if points share identical or near-identical coords, spread them slightly
+    try:
+        arr = np.array(embeddings_2d, dtype=float)
+        if arr.ndim == 2 and arr.shape[0] > 1:
+            coords = np.round(arr, 6)
+            df = pd.DataFrame({'x': coords[:, 0], 'y': coords[:, 1]})
+            groups = df.groupby(['x', 'y']).indices
+            for _, idxs in groups.items():
+                if len(idxs) > 1:
+                    k = len(idxs)
+                    angles = np.linspace(0, 2*np.pi, k, endpoint=False)
+                    jitter = 0.015
+                    for j, i in enumerate(idxs):
+                        arr[i, 0] += jitter * np.cos(angles[j])
+                        arr[i, 1] += jitter * np.sin(angles[j])
+            embeddings_2d = arr
+    except Exception:
+        pass
+    
     # Create figure
     plt.figure(figsize=(10, 8))
     

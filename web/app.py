@@ -29,8 +29,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('DeepSeaEDNA.web')
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize Flask app (enable instance config)
+app = Flask(__name__, instance_relative_config=True)
 app.config['SECRET_KEY'] = 'deep-sea-edna-explorer-secret-key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///deepsea_edna.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -41,8 +41,18 @@ app.config['MONGO_URI'] = os.environ.get('MONGO_URI', 'mongodb://localhost:27017
 # Initialize Mongo client
 mongo = PyMongo(app)
 
-# Ensure upload directory exists
+# Load instance config if present (instance/config.py, ignored by git)
+try:
+    app.config.from_pyfile('config.py', silent=True)
+except Exception:
+    pass
+
+# Ensure upload and instance directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+try:
+    os.makedirs(app.instance_path, exist_ok=True)
+except Exception:
+    pass
 
 # Enable CSRF protection
 csrf = CSRFProtect(app)
@@ -75,6 +85,90 @@ def nl2br(value):
         return value.replace('\n', '<br>')
     return ''
 
+@app.template_filter('datetimeformat')
+def datetimeformat(value, fmt='%Y-%m-%d'):
+    try:
+        import datetime as _dt
+        if value is None:
+            return ''
+        if isinstance(value, (_dt.datetime, _dt.date)):
+            return value.strftime(fmt)
+        if isinstance(value, (int, float)):
+            dt = _dt.datetime.fromtimestamp(value)
+            return dt.strftime(fmt)
+        if isinstance(value, str):
+            try:
+                dt = _dt.datetime.fromisoformat(value)
+                return dt.strftime(fmt)
+            except Exception:
+                return value
+    except Exception:
+        return ''
+
+@app.template_filter('timeago')
+def timeago(value):
+    try:
+        import datetime as _dt
+        if value is None:
+            return ''
+        if isinstance(value, str):
+            try:
+                value = _dt.datetime.fromisoformat(value)
+            except Exception:
+                return value
+        if isinstance(value, _dt.date) and not isinstance(value, _dt.datetime):
+            value = _dt.datetime.combine(value, _dt.time.min)
+        now = _dt.datetime.utcnow()
+        if isinstance(value, _dt.datetime) and value.tzinfo:
+            now = _dt.datetime.now(value.tzinfo)
+        delta = now - value
+        seconds = int(delta.total_seconds())
+        intervals = (
+            ('year', 31536000),
+            ('month', 2592000),
+            ('week', 604800),
+            ('day', 86400),
+            ('hour', 3600),
+            ('minute', 60),
+            ('second', 1),
+        )
+        for name, count in intervals:
+            value_count = seconds // count
+            if value_count:
+                return f"{value_count} {name}{'' if value_count == 1 else 's'} ago"
+        return 'just now'
+    except Exception:
+        return ''
+
+@app.template_filter('numberformat')
+def numberformat(value, decimals=None):
+    try:
+        if value is None:
+            return ''
+        if isinstance(value, (int, float)):
+            if decimals is None:
+                return f"{value:,}"
+            try:
+                decimals_int = int(decimals)
+            except Exception:
+                decimals_int = 0
+            return f"{value:,.{decimals_int}f}"
+        # Try casting strings that represent numbers
+        if isinstance(value, str):
+            try:
+                if '.' in value:
+                    num = float(value)
+                    if decimals is None:
+                        return f"{num:,}"
+                    return f"{num:,.{int(decimals)}f}"
+                else:
+                    num = int(value)
+                    return f"{num:,}"
+            except Exception:
+                return value
+        return str(value)
+    except Exception:
+        return str(value)
 # Import User model for Flask-Login
 from models import User
 
