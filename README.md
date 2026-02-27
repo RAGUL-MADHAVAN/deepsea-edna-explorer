@@ -1,103 +1,176 @@
-# DeepSeaEDNA: AI-Driven Pipeline for Deep-Sea Environmental DNA Analysis
-## Overview
+# DeepSea eDNA Explorer
 
-DeepSeaEDNA is a discovery & analysis tool designed specifically for analyzing environmental DNA (eDNA) from deep-sea ecosystems. This system uses fixed DNA embeddings and unsupervised clustering to discover biodiversity patterns without any supervised or unsupervised model training.
+Modern, end‑to‑end platform for deep‑sea environmental DNA (eDNA) analysis. It includes:
+- A web app for uploading samples, running analyses, visualizing results, generating reports, and chatting with an AI assistant.
+- A modular pipeline (Python) for QC, embedding, clustering, taxonomy, abundance and reporting.
 
-### Key Features
-- **Database-Independent Analysis**: Minimizes reliance on incomplete reference databases for deep-sea organisms
-- **Fixed Embedding Classification**: Uses deterministic projections to identify patterns in sequence data
-- **Taxonomic Annotation**: Assigns taxonomic classifications using reference-matching and novelty discovery
-- **Abundance Estimation**: Provides quantitative measures of species abundance in samples
-- **Novel Taxa Discovery**: Enables identification of previously unknown deep-sea organisms
-- **Unsupervised Clustering**: Groups sequences based on inherent similarity using HDBSCAN
+This README explains the flow from install → run → analyze → report → AI assistant, and where each piece lives in the repo.
 
-## Background
+---
 
-The deep ocean harbors a significant portion of global biodiversity, much of which remains undiscovered due to its inaccessibility. Environmental DNA (eDNA) has emerged as a powerful, non-invasive tool for studying these ecosystems by capturing genetic traces of organisms from environmental samples.
-
-However, traditional bioinformatic pipelines for eDNA analysis rely heavily on reference databases like SILVA, PR2, or NCBI, which lack comprehensive sequences for deep-sea eukaryotes. This leads to misclassifications, unassigned reads, or underestimation of biodiversity.
-
-## Installation
-
-### Prerequisites
-
-- Python 3.8+
-- 16GB+ RAM
-
-### Setup
+## Quick Start (TL;DR)
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-organization/DeepSeaEDNA.git
-cd DeepSeaEDNA
-
-# Create and activate a virtual environment (optional but recommended)
+# 1) Create virtual env and install deps
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+.\venv\Scripts\activate      # Windows
+# source venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
+
+# 2) Set AI assistant key (optional but recommended)
+# Windows PowerShell (current session):
+$env:OPENAI_API_KEY = "sk-...your-key..."
+# macOS/Linux (bash/zsh):
+export OPENAI_API_KEY="sk-...your-key..."
+
+# 3) Start the web app
+cd web
+python app.py
+
+# Open http://localhost:5000
 ```
 
-## Usage
+---
 
-### Basic Workflow
+## Repository Structure
 
+- web/
+  - app.py               – Flask app entrypoint and configuration
+  - routes.py            – All web routes (dashboard, projects, samples, AI API)
+  - models.py            – SQLAlchemy models (User, Project, Sample, Analysis)
+  - templates/           – Jinja2 templates for pages
+  - static/              – CSS, JS, images
+- src/
+  - pipeline/            – Modular pipeline (QC, denoising, clustering, taxonomy, etc.)
+  - utils/               – Shared utilities (I/O, visualization, external tools)
+- tests/
+  - test_pipeline.py     – Example tests for pipeline components
+
+---
+
+## End‑to‑End Flow
+
+1) Upload Data
+- In the web UI, create a Project and add Samples (FASTA/FASTQ/CSV/XLSX).
+- The server will convert CSV/XLSX/FASTQ into FASTA when needed for downstream steps.
+
+2) Run Analysis
+- From a Sample page, start an Analysis. The pipeline runs in the background:
+  - Preprocessing/QC (optional)
+  - Denoising/ASV generation (VSEARCH if available; Python fallback otherwise)
+  - Embedding (DNABERT‑2 if available; k‑mer fallback otherwise)
+  - Clustering (HDBSCAN) and novelty scoring
+  - Taxonomy (BLAST/reference matching when available)
+  - Abundance estimation and basic biodiversity metrics
+  - Visualization assets and report data generation
+- Results are stored under a run‑specific output directory.
+
+3) Visualize
+- Dashboard, Project, Sample pages summarize status and results.
+- Report pages show charts (pie, bar, novelty plots), clustering tiles, and summary metrics.
+- Values are formatted for readability; charts use a scientific color palette for clarity.
+
+4) Report & Print/PDF
+- Use the report page’s print/download to produce a clean PDF:
+  - Non‑essential UI is hidden in print view.
+  - Cards are arranged for paper with consistent spacing and titles.
+
+5) AI Assistant (Optional but powerful)
+- Ask questions about your data or methods in the AI Assistant page.
+- The assistant sends your prompt (and optional project/sample context) to an OpenAI‑compatible endpoint.
+- Responses appear in the chat with basic formatting and linkification.
+
+---
+
+## Web App: Configuration
+
+Environment variables (read by the backend). You can set them per‑session in your shell or persist in your OS environment.
+
+- OPENAI_API_KEY – required to enable the AI assistant.
+- OPENAI_BASE_URL – optional; defaults to `https://api.openai.com/v1` (use this if pointing to an OpenAI‑compatible provider).
+- OPENAI_MODEL – optional; defaults to `gpt-4o-mini` (e.g., `gpt-4o`).
+- MONGO_URI – optional; defaults to `mongodb://localhost:27017/deepsea_edna`.
+
+Windows PowerShell (current session):
+```powershell
+$env:OPENAI_API_KEY = "sk-...your-key..."
+```
+
+macOS/Linux:
 ```bash
-# Run the complete pipeline on a sample
+export OPENAI_API_KEY="sk-...your-key..."
+```
+
+Instance configuration file (optional):
+- The app will also load `web/instance/config.py` if present (ignored by Git).
+- Example contents:
+```python
+OPENAI_API_KEY = "sk-...your-key..."
+OPENAI_MODEL = "gpt-4o-mini"
+# OPENAI_BASE_URL = "https://api.openai.com/v1"
+```
+
+Start the web app:
+```bash
+cd web
+python app.py
+# Browse http://localhost:5000
+```
+
+---
+
+## Pipeline: Command‑Line Usage
+
+Run the full pipeline on a FASTQ/FASTA file:
+```bash
 python src/pipeline.py --input data/raw/sample1.fastq --output data/processed/results/
 ```
 
-### Pipeline Components
+Key modules (also invokable independently where applicable):
+- Embedding & Clustering: `src/pipeline/embedding.py`, `src/pipeline/clustering.py`
+- Taxonomy: `src/pipeline/taxonomy.py` (uses BLAST when available)
+- Abundance: `src/pipeline/abundance.py` and `src/abundance/estimate.py`
+- Visualization: `src/utils/visualization.py`
 
-The pipeline consists of several modules that can be run independently:
+Optional external tools (improve results if installed):
+- VSEARCH (denoising), Bowtie2 (mapping), MEGAHIT/metaSPAdes (assembly), MAFFT/EPA‑ng/GAPPA (phylogeny)
+- The code auto‑detects tools and falls back to Python implementations when absent.
 
-1. **Sequence Classification**
-   ```bash
-   python src/classification/classify.py --input data/raw/sample1.fastq --output data/processed/classified/
-   ```
+Input formats:
+- FASTQ/FASTA directly supported; CSV/XLSX with sequence columns are converted internally.
 
-2. **Taxonomic Annotation**
-   ```bash
-   python src/annotation/annotate.py --input data/processed/classified/ --output data/processed/annotated/
-   ```
+Outputs:
+- Cluster assignments, taxonomy tables (where matched), abundance summaries, novelty scores, figures.
 
-3. **Abundance Estimation**
-   ```bash
-   python src/abundance/estimate.py --input data/processed/annotated/ --output data/processed/abundance/
-   ```
+---
 
-## Data Requirements
+## Development
 
-- Raw eDNA sequencing data (FASTQ format)
-- Optional: Reference sequences for hybrid classification approach
-
-## Output
-
-The pipeline generates several outputs:
-
-- Classified sequence clusters
-- Taxonomic assignments (Reference-matched or Potential Novel)
-- Abundance estimates for identified taxa
-- Biodiversity metrics and visualizations
-
-## Contributing
-
-Contributions to improve DeepSeaEDNA are welcome. Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Citation
-
-If you use DeepSeaEDNA in your research, please cite our paper:
-
-```
-[Citation information will be added upon publication]
+Run tests (if `pytest` is installed):
+```bash
+pytest -q
 ```
 
-## Acknowledgments
+Code style:
+- Python modules follow a modular structure. Avoid committing secrets.
+- Web templates are Jinja2; static assets live under `web/static/`.
 
-- Centre for Marine Living Resources and Ecology (CMLRE)
-- [Other collaborators and funding sources]
+---
+
+## Troubleshooting
+
+- “AI not configured: set OPENAI_API_KEY…” in chat
+  - Set `OPENAI_API_KEY` in your environment or `web/instance/config.py`, then restart the server.
+
+- 400 “CSRF token missing” on API calls from the browser
+  - Make sure the page includes the CSRF meta tag (from base template). The bundled JS automatically attaches the `X‑CSRFToken` header.
+
+- External tools not found
+  - The pipeline will fall back to pure‑Python modes. Install tools (e.g., VSEARCH, Bowtie2) and ensure they’re in `PATH` for full functionality.
+---
+
+## Credits & License
+- Built for deep‑sea biodiversity research with a focus on high‑clarity scientific reporting and modern UX.
+- License: MIT (see LICENSE).
+
+If you use DeepSea eDNA Explorer in your research, please cite the project (citation details forthcoming).

@@ -268,7 +268,13 @@
                                 <div class="comment mb-3">
                                     <div class="d-flex">
                                         <div class="flex-shrink-0">
-                                            <img src="{{ comment.user.profile_picture or url_for('static', filename='img/default-profile.png') }}" class="rounded-circle" width="40" height="40" alt="{{ comment.user.username }}">
+                                            {% if comment.user.profile_picture %}
+                                            <img src="{{ comment.user.profile_picture }}" class="profile-picture-sm" alt="{{ comment.user.username }}">
+                                            {% else %}
+                                            <div class="avatar-initials-sm">
+                                                {{ (comment.user.full_name or comment.user.username)[:1] }}
+                                            </div>
+                                            {% endif %}
                                         </div>
                                         <div class="flex-grow-1 ms-3">
                                             <div class="d-flex justify-content-between align-items-center">
@@ -301,7 +307,13 @@
                                     {{ comment_form.hidden_tag() }}
                                     <div class="d-flex">
                                         <div class="flex-shrink-0">
-                                            <img src="{{ current_user.profile_picture or url_for('static', filename='img/default-profile.png') }}" class="rounded-circle" width="40" height="40" alt="{{ current_user.username }}">
+                                            {% if current_user.profile_picture %}
+                                            <img src="{{ current_user.profile_picture }}" class="profile-picture-sm" alt="{{ current_user.username }}">
+                                            {% else %}
+                                            <div class="avatar-initials-sm">
+                                                {{ (current_user.name or current_user.username)[:1] }}
+                                            </div>
+                                            {% endif %}
                                         </div>
                                         <div class="flex-grow-1 ms-3">
                                             <div class="mb-3">
